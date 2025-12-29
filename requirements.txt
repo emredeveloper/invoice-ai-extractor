@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+python-multipart
+celery
+redis
+python-dotenv
+pydantic
+google-generativeai
+httpx
+pymupdf
+Pillow
+python-magic
+pytest
+pytest-asyncio
