@@ -8,7 +8,7 @@ from io import BytesIO
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional
 import json
-from prompts import SYSTEM_PROMPT, USER_PROMPT_TEMPLATE
+from app.core.prompts import SYSTEM_PROMPT, USER_PROMPT_TEMPLATE
 
 class LLMProvider(ABC):
     @abstractmethod

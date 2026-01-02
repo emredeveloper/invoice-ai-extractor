@@ -6,7 +6,7 @@ Bu sistem, asenkron bir mimari kullanarak faturalardan (PDF, resim, metin) akıl
 
 1.  **Docker ile Başlat:** `docker-compose up --build` komutuyla tüm sistemi (API, Worker, Redis) ayağa kaldırın.
 2.  **Yapılandırma:** [.env](.env) dosyasında `LLM_PROVIDER` ve ilgili API/URL bilgilerini ayarlayın.
-3.  **Test Et:** `python auto_test.py` komutuyla örnek faturaları işleyin.
+3.  **Test Et:** `python tests/auto_test.py` komutuyla örnek faturaları işleyin.
 
 ## 🛠️ Adım Adım Uygulama & Kod Referansları
 
@@ -17,27 +17,27 @@ Sistemin ölçeklenebilir olması için Docker tabanlı bir yapı kuruldu.
 
 ### Adım 2: API ve Görev Yönetimi (Task Queue)
 Asenkron işlem mimarisi sayesinde büyük dosyalar API'yi kilitlemeden işlenir.
-- [main.py](main.py): FastAPI ile dosya yükleme ve statü takibi endpointlerini sunar.
-- [tasks.py](tasks.py): Ağır LLM görevlerini Celery ve Redis kullanarak arka planda yürütür.
+- [app/api/main.py](app/api/main.py): FastAPI ile dosya yükleme ve statü takibi endpointlerini sunar.
+- [app/worker/tasks.py](app/worker/tasks.py): Ağır LLM görevlerini Celery ve Redis kullanarak arka planda yürütür.
 
 ### Adım 3: Agentic Veri Çıkarma Motoru
 Sistem sadece metni LLM'e göndermek yerine, dosya içeriğini analiz eden "agentic" bir yaklaşıma sahiptir.
-- [extraction_engine.py](extraction_engine.py): `ExtractionEngine` sınıfı, PDF'leri vision modelleri için görsele dönüştürür (PyMuPDF kullanarak) ve uygun LLM sağlayıcısını (Gemini veya Local) seçer.
-- [prompts.py](prompts.py): Modeli yapılandırılmış JSON çıktısı üretmeye zorlayan "System Prompt"ları içerir. **Yeni şema:** `tax_amount`, `tax_rate` ve `currency` alanları eklendi.
+- [app/core/extraction_engine.py](app/core/extraction_engine.py): `ExtractionEngine` sınıfı, PDF'leri vision modelleri için görsele dönüştürür (PyMuPDF kullanarak) ve uygun LLM sağlayıcısını (Gemini veya Local) seçer.
+- [app/core/prompts.py](app/core/prompts.py): Modeli yapılandırılmış JSON çıktısı üretmeye zorlayan "System Prompt"ları içerir. **Yeni şema:** `tax_amount`, `tax_rate` ve `currency` alanları eklendi.
 
 ### Adım 4: Esnek Akıllı Analiz ve Bonus Doğrulamalar
 Çıkarılan veriler üzerinde **dinamik** kontroller yapılır.
 - **Aritmetik Doğrulama:** Her bir kalem için `miktar * birim fiyat = toplam` kontrolü yapılır.
-- **Dinamik Vergi Doğrulaması:** Sistem artık sabit %18'e bağlı değildir. [validators.py](validators.py) içinde, faturadan çıkarılan `tax_rate` değeri (örn: %1, %8, %20, ÖTV, Stopaj) kullanılarak doğrulama yapılır. Oran bulunamazsa varsayılan %18 kullanılır.
+- **Dinamik Vergi Doğrulaması:** Sistem artık sabit %18'e bağlı değildir. [app/core/validators.py](app/core/validators.py) içinde, faturadan çıkarılan `tax_rate` değeri (örn: %1, %8, %20, ÖTV, Stopaj) kullanılarak doğrulama yapılır. Oran bulunamazsa varsayılan %18 kullanılır.
 - **Evrensel Para Birimi:** TL, USD, EUR veya herhangi bir para birimi simgesi model tarafından otomatik olarak tanınır.
 
 ### Adım 5: Yerel LLM ve Çözüm Yaklaşımı (Local Support)
 Donanım (RTX 4060) kısıtları ve veri mahremiyeti için LM Studio entegrasyonu sağlandı.
-- [LocalLLMProvider](extraction_engine.py#L38): OpenAI uyumlu API formatını kullanarak yerel vision modelleriyle (Qwen-VL) haberleşir.
+- [LocalLLMProvider](app/core/extraction_engine.py#L39): OpenAI uyumlu API formatını kullanarak yerel vision modelleriyle (Qwen-VL) haberleşir.
 
 ### Adım 6: GDPR / KVKK ve Veri Mahremiyeti
 Hassas verilerin korunması için iki temel mekanizma eklendi:
-- **Otomatik Silme:** [tasks.py](tasks.py#L51) içinde işlem biter bitmez dosyalar diskten kalıcı olarak silinir.
+- **Otomatik Silme:** [app/worker/tasks.py](app/worker/tasks.py#L51) içinde işlem biter bitmez dosyalar diskten kalıcı olarak silinir.
 - **Local Inference:** Verilerin buluta çıkmasını istemeyen kullanıcılar için yerel LLM desteği sunulur.
 
 ## 📈 Değerlendirme Kriterleri ve Çözümler

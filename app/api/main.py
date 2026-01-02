@@ -2,7 +2,7 @@ import os
 import shutil
 import uuid
 from fastapi import FastAPI, UploadFile, File, HTTPException
-from tasks import celery
+from app.worker.tasks import celery
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 

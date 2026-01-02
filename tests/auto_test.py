@@ -4,7 +4,7 @@ import os
 import sys
 
 BASE_URL = "http://localhost:8000"
-SAMPLES_DIR = "Fatura PDF"
+SAMPLES_DIR = "samples"
 
 def test_invoice(file_path):
     print(f"\n[+] Testing: {file_path}")

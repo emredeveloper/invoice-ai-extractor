@@ -1,7 +1,7 @@
 import os
 from celery import Celery
-from extraction_engine import ExtractionEngine, GeminiProvider, LocalLLMProvider
-from validators import validate_arithmetic, validate_tax
+from app.core.extraction_engine import ExtractionEngine, GeminiProvider, LocalLLMProvider
+from app.core.validators import validate_arithmetic, validate_tax
 import asyncio
 from dotenv import load_dotenv
 
@@ -9,8 +9,8 @@ load_dotenv()
 
 celery = Celery(
     "tasks",
-    broker=os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0"),
-    backend=os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
+    broker=os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0"),
+    backend=os.getenv("CELERY_RESULT_BACKEND", "redis://redis:6379/0")
 )
 
 def get_engine():
@@ -19,8 +19,8 @@ def get_engine():
         provider = GeminiProvider(os.getenv("GOOGLE_API_KEY"))
     else:
         provider = LocalLLMProvider(
-            os.getenv("LOCAL_LLM_URL", "http://host.docker.internal:11434/v1"),
-            os.getenv("LOCAL_LLM_MODEL", "deepseek-ocr:latest")
+            os.getenv("LOCAL_LLM_URL", "http://host.docker.internal:1234/v1"),
+            os.getenv("LOCAL_LLM_MODEL", "qwen/qwen3-vl-4b")
         )
     return ExtractionEngine(provider)
 
