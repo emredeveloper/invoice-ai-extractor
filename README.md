@@ -46,6 +46,3 @@ Hassas verilerin korunması için iki temel mekanizma eklendi:
 - **Ölçeklenebilirlik:** Sistem stateless (durumsuz) olup, worker sayısı artırılarak 1000x yük altında dahi çalışabilir.
 - **Hata Yönetimi:** Ağ kopmaları veya OOM (bellek yetersizliği) durumları için try-except blokları ve loglama mekanizması kurulmuştur.
 - **Esneklik:** Her türlü vergi oranı (%1, %8, %20 vb.) ve para birimi (TL, USD, EUR vb.) desteklenir.
-
----
-*Bu proje, QIT AI Engineer değerlendirme yönergesindeki tüm zorunlu ve bonus maddeleri karşılayacak şekilde tasarlanmıştır.*
