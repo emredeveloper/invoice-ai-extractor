@@ -9,7 +9,8 @@ from app.api.schemas import (
     InvoiceResponse, 
     InvoiceListResponse, 
     ExportRequest,
-    DashboardStats
+    DashboardStats,
+    InvoiceUpdate
 )
 from app.core.export_service import ExportService
 
@@ -138,6 +139,34 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
     recent_cursor = invoices.find({"user_id": user_id}).sort("created_at", -1).limit(5)
     recent = [invoice_helper(doc) async for doc in recent_cursor]
     
+    # NEW: Spending Trend (Last 7 days)
+    trend_start = today_start - timedelta(days=6)
+    trend_pipeline = [
+        {"$match": {
+            "user_id": user_id, 
+            "created_at": {"$gte": trend_start},
+            "status": "completed"
+        }},
+        {"$group": {
+            "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$created_at"}},
+            "total": {"$sum": {"$ifNull": ["$total_amount", 0]}},
+            "count": {"$sum": 1}
+        }},
+        {"$sort": {"_id": 1}}
+    ]
+    trend_results = await invoices.aggregate(trend_pipeline).to_list(7)
+    
+    # Fill gaps in trend
+    spending_trend = []
+    for i in range(7):
+        day = (trend_start + timedelta(days=i)).strftime("%Y-%m-%d")
+        day_data = next((item for item in trend_results if item["_id"] == day), None)
+        spending_trend.append({
+            "date": day,
+            "total": day_data["total"] if day_data else 0,
+            "count": day_data["count"] if day_data else 0
+        })
+
     return DashboardStats(
         total_invoices=stats.get("total", 0),
         completed_invoices=stats.get("completed", 0),
@@ -152,7 +181,12 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
             {"name": s["_id"], "count": s["count"], "total": s["total"]}
             for s in top_suppliers
         ],
-        recent_invoices=recent
+        recent_invoices=recent,
+        spending_trend=spending_trend,
+        category_stats=[
+            {"name": s["_id"], "value": s["total"]}
+            for s in top_suppliers
+        ]
     )
 
 
@@ -173,6 +207,37 @@ async def get_invoice(
         raise HTTPException(status_code=404, detail="Invoice not found")
     
     return invoice_helper(invoice)
+
+
+@router.put("/{invoice_id}", response_model=InvoiceResponse)
+async def update_invoice(
+    invoice_id: str,
+    invoice_update: InvoiceUpdate,
+    current_user: dict = Depends(get_current_user),
+):
+    """Update an existing invoice."""
+    invoices = get_invoices_collection()
+    
+    # Check ownership
+    existing = await invoices.find_one({
+        "_id": invoice_id,
+        "user_id": current_user["id"]
+    })
+    
+    if not existing:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    
+    # Prepare update data
+    update_data = invoice_update.dict(exclude_unset=True)
+    update_data["updated_at"] = datetime.utcnow()
+    
+    await invoices.update_one(
+        {"_id": invoice_id},
+        {"$set": update_data}
+    )
+    
+    updated = await invoices.find_one({"_id": invoice_id})
+    return invoice_helper(updated)
 
 
 @router.delete("/{invoice_id}", status_code=204)

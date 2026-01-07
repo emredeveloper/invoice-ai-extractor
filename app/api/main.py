@@ -142,6 +142,7 @@ async def upload_invoice(
         "original_filename": file.filename,
         "file_type": file_ext,
         "file_size": os.path.getsize(file_path),
+        "file_path": file_path,
         "status": "pending",
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow()
@@ -161,7 +162,36 @@ async def upload_invoice(
     return {"task_id": task.id, "invoice_id": invoice_id}
 
 
-@app.get("/status/{task_id}", response_model=TaskStatus)
+@app.get("/files/{invoice_id}")
+async def get_invoice_file(
+    invoice_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Serve the original invoice file with security check."""
+    invoices = get_invoices_collection()
+    invoice = await invoices.find_one({
+        "_id": invoice_id,
+        "user_id": current_user["id"]
+    })
+    
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    
+    # We need to find the file in uploads directory. 
+    # We don't store the path directly in invoice_doc currently, 
+    # but we can reconstruct it if we had stored the file_id or the full path.
+    # Looking at upload_invoice, we use a file_id (uuid) but we don't save it to DB.
+    # FIX: I should have saved the file path to the DB.
+    # For now, let's assume we can try to find it if we saved the task_id or similar.
+    # Wait, I didn't save the filename used in UPLOAD_DIR to the DB.
+    
+    # RE-FIX: I need to update upload_invoice to save the file_path.
+    
+    file_path = invoice.get("file_path")
+    if not file_path or not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found on disk")
+        
+    return FileResponse(file_path)
 @limiter.limit("60/minute")
 async def get_status(
     request: Request,

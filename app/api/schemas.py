@@ -37,6 +37,7 @@ class InvoiceResponse(BaseModel):
     currency: Optional[str] = None
     tax_amount: Optional[float] = None
     tax_rate: Optional[float] = None
+    category: Optional[str] = "Genel"
     
     # Validations
     arithmetic_validation: Optional[List[Dict[str, Any]]] = None
@@ -50,6 +51,19 @@ class InvoiceResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class InvoiceUpdate(BaseModel):
+    """Schema for updating an existing invoice."""
+    invoice_number: Optional[str] = None
+    invoice_date: Optional[str] = None
+    supplier_name: Optional[str] = None
+    total_amount: Optional[float] = None
+    currency: Optional[str] = None
+    tax_amount: Optional[float] = None
+    tax_rate: Optional[float] = None
+    category: Optional[str] = None
+    status: Optional[str] = None
 
 
 class InvoiceListResponse(BaseModel):
@@ -152,3 +166,5 @@ class DashboardStats(BaseModel):
     invoices_this_week: int
     top_suppliers: List[Dict[str, Any]]
     recent_invoices: List[InvoiceResponse]
+    spending_trend: List[Dict[str, Any]] = []
+    category_stats: List[Dict[str, Any]] = []

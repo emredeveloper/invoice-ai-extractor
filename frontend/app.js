@@ -27,6 +27,7 @@ const elements = {
     totalInvoices: document.getElementById('totalInvoices'),
     completedInvoices: document.getElementById('completedInvoices'),
     failedInvoices: document.getElementById('failedInvoices'),
+    totalTax: document.getElementById('totalTax'),
     totalAmount: document.getElementById('totalAmount'),
     topSuppliers: document.getElementById('topSuppliers'),
     recentInvoicesTable: document.getElementById('recentInvoicesTable'),
@@ -109,6 +110,10 @@ let isLoginMode = true;
 let batchFiles = [];
 let currentPage = 1;
 let totalPages = 1;
+let charts = {
+    performance: null,
+    category: null
+};
 
 // ===== Utility Functions =====
 function showToast(message, type = 'info') {
@@ -370,17 +375,8 @@ async function loadDashboard() {
         elements.totalInvoices.textContent = stats.total_invoices;
         elements.completedInvoices.textContent = stats.completed_invoices;
         elements.failedInvoices.textContent = stats.failed_invoices;
+        elements.totalTax.textContent = formatCurrency(stats.total_tax);
         elements.totalAmount.textContent = formatCurrency(stats.total_amount);
-
-        // Top suppliers
-        if (stats.top_suppliers && stats.top_suppliers.length > 0) {
-            elements.topSuppliers.innerHTML = stats.top_suppliers.map(s => `
-                <li class="supplier-item">
-                    <span class="supplier-name">${s.name || 'Bilinmeyen'}</span>
-                    <span class="supplier-count">${s.count} fatura</span>
-                </li>
-            `).join('');
-        }
 
         // Recent invoices
         if (stats.recent_invoices && stats.recent_invoices.length > 0) {
@@ -394,6 +390,68 @@ async function loadDashboard() {
                 </tr>
             `).join('');
         }
+
+        // --- Performance Chart (Spending Trend) ---
+        const perfCtx = document.getElementById('performanceChart').getContext('2d');
+        if (charts.performance) charts.performance.destroy();
+
+        charts.performance = new Chart(perfCtx, {
+            type: 'line',
+            data: {
+                labels: stats.spending_trend.map(d => formatDate(d.date)),
+                datasets: [{
+                    label: 'Harcama (₺)',
+                    data: stats.spending_trend.map(d => d.total),
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#6366f1'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+                    x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                }
+            }
+        });
+
+        // --- Category/Supplier Distribution Chart ---
+        const catCtx = document.getElementById('categoryChart').getContext('2d');
+        if (charts.category) charts.category.destroy();
+
+        charts.category = new Chart(catCtx, {
+            type: 'doughnut',
+            data: {
+                labels: stats.category_stats.map(s => s.name || 'Bilinmeyen'),
+                datasets: [{
+                    data: stats.category_stats.map(s => s.value),
+                    backgroundColor: [
+                        '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'
+                    ],
+                    borderWidth: 0,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: { color: '#94a3b8', font: { size: 11 }, usePointStyle: true }
+                    }
+                },
+                cutout: '70%'
+            }
+        });
+
     } catch (error) {
         console.error('Failed to load dashboard:', error);
     }
@@ -571,65 +629,130 @@ function renderPagination() {
 async function viewInvoice(id) {
     try {
         const invoice = await apiRequest(`/invoices/${id}`);
+        openModal(elements.invoiceModal);
+
+        const isImage = ['.jpg', '.jpeg', '.png'].includes(invoice.file_type.toLowerCase());
+        const fileUrl = `${API_BASE_URL}/files/${id}?token=${authToken}`; // Token for preview
 
         elements.invoiceModalBody.innerHTML = `
-            <div class="invoice-detail">
-                <div class="detail-grid">
-                    <div class="detail-item">
-                        <label>Fatura No</label>
-                        <span>${invoice.invoice_number || '-'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <label>Tarih</label>
-                        <span>${invoice.invoice_date || '-'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <label>Tedarikçi</label>
-                        <span>${invoice.supplier_name || '-'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <label>Toplam</label>
-                        <span>${formatCurrency(invoice.total_amount, invoice.currency)}</span>
-                    </div>
-                    <div class="detail-item">
-                        <label>Vergi</label>
-                        <span>${formatCurrency(invoice.tax_amount, invoice.currency)} (%${invoice.tax_rate || 0})</span>
-                    </div>
-                    <div class="detail-item">
-                        <label>Durum</label>
-                        ${getStatusBadge(invoice.status)}
-                    </div>
+            <div class="verification-container">
+                <div class="preview-pane">
+                    ${isImage
+                ? `<img src="${fileUrl}" alt="Invoice Preview">`
+                : `<iframe src="${fileUrl}" frameborder="0"></iframe>`
+            }
                 </div>
-                
-                ${invoice.items && invoice.items.length > 0 ? `
-                    <h4 style="margin: 1.5rem 0 1rem;">Kalemler</h4>
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Ürün</th>
-                                <th>Miktar</th>
-                                <th>Birim Fiyat</th>
-                                <th>Toplam</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${invoice.items.map(item => `
-                                <tr>
-                                    <td>${item.product_name || '-'}</td>
-                                    <td>${item.quantity || '-'}</td>
-                                    <td>${formatCurrency(item.unit_price, invoice.currency)}</td>
-                                    <td>${formatCurrency(item.total_price, invoice.currency)}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                ` : ''}
+                <div class="editor-pane">
+                    <form id="editInvoiceForm">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Fatura No</label>
+                                <input type="text" name="invoice_number" class="form-input" value="${invoice.invoice_number || ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Tarih</label>
+                                <input type="text" name="invoice_date" class="form-input" value="${invoice.invoice_date || ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Tedarikçi</label>
+                                <input type="text" name="supplier_name" class="form-input" value="${invoice.supplier_name || ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Kategori</label>
+                                <select name="category" class="form-input">
+                                    <option value="Genel" ${invoice.category === 'Genel' ? 'selected' : ''}>Genel</option>
+                                    <option value="Akaryakıt" ${invoice.category === 'Akaryakıt' ? 'selected' : ''}>Akaryakıt</option>
+                                    <option value="Gıda" ${invoice.category === 'Gıda' ? 'selected' : ''}>Gıda</option>
+                                    <option value="Teknoloji" ${invoice.category === 'Teknoloji' ? 'selected' : ''}>Teknoloji</option>
+                                    <option value="Lojistik" ${invoice.category === 'Lojistik' ? 'selected' : ''}>Lojistik</option>
+                                    <option value="Hizmet" ${invoice.category === 'Hizmet' ? 'selected' : ''}>Hizmet</option>
+                                    <option value="Kırtasiye" ${invoice.category === 'Kırtasiye' ? 'selected' : ''}>Kırtasiye</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Toplam Tutar</label>
+                                <input type="number" step="0.01" name="total_amount" class="form-input" value="${invoice.total_amount || ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Para Birimi</label>
+                                <input type="text" name="currency" class="form-input" value="${invoice.currency || ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Vergi Tutarı</label>
+                                <input type="number" step="0.01" name="tax_amount" class="form-input" value="${invoice.tax_amount || ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Vergi Oranı (%)</label>
+                                <input type="number" name="tax_rate" class="form-input" value="${invoice.tax_rate || ''}">
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <h4>Fatura Kalemleri</h4>
+                            <div class="items-editor">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Ürün</th>
+                                            <th>Adet</th>
+                                            <th>Fiyat</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${invoice.items.map(item => `
+                                            <tr>
+                                                <td>${item.product_name || '-'}</td>
+                                                <td>${item.quantity || '-'}</td>
+                                                <td>${formatCurrency(item.total_price, invoice.currency)}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <td colspan="3" style="text-align: center;">
+                                                <button type="button" class="btn btn-sm btn-secondary">Kalem Ekle</button>
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="form-actions mt-4">
+                            <button type="button" class="btn btn-primary" onclick="saveInvoice('${id}')">Değişiklikleri Kaydet</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         `;
-
-        openModal(elements.invoiceModal);
     } catch (error) {
         showToast('Fatura detayı yüklenemedi', 'error');
+    }
+}
+
+async function saveInvoice(id) {
+    const form = document.getElementById('editInvoiceForm');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    // Convert numeric fields
+    ['total_amount', 'tax_amount', 'tax_rate'].forEach(key => {
+        if (data[key]) data[key] = parseFloat(data[key]);
+        else delete data[key];
+    });
+
+    try {
+        await apiRequest(`/invoices/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        });
+
+        showToast('Fatura güncellendi!', 'success');
+        closeModal(elements.invoiceModal); // Close modal after saving
+        loadInvoices(currentPage);
+        loadDashboard();
+    } catch (error) {
+        showToast('Güncelleme başarısız', 'error');
     }
 }
 

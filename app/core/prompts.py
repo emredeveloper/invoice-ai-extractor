@@ -20,7 +20,8 @@ Schema:
     "total_amount": "number or null",
     "currency": "string or null (e.g., TL, USD, EUR)",
     "tax_amount": "number or null (total tax found on invoice)",
-    "tax_rate": "number or null (e.g., 18, 20, 8, 1)"
+    "tax_rate": "number or null (e.g., 18, 20, 8, 1)",
+    "category": "string (one of: Akaryakıt, Gıda, Teknoloji, Lojistik, Hizmet, Kırtasiye, Genel)"
   },
   "items": [
     {

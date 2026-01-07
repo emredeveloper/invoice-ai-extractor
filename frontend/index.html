@@ -1,15 +1,19 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="AI destekli fatura veri çıkarma sistemi - PDF, resim ve metin faturalarından otomatik veri çıkarma">
+    <meta name="description"
+        content="AI destekli fatura veri çıkarma sistemi - PDF, resim ve metin faturalarından otomatik veri çıkarma">
     <title>Invoice AI - Akıllı Fatura İşleme</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
     <div id="app">
         <!-- Sidebar -->
@@ -20,7 +24,7 @@
                     <span class="logo-text">Invoice<span class="logo-ai">AI</span></span>
                 </div>
             </div>
-            
+
             <nav class="sidebar-nav">
                 <a href="#" class="nav-item active" data-page="dashboard">
                     <span class="nav-icon">📊</span>
@@ -47,7 +51,7 @@
                     <span class="nav-text">Ayarlar</span>
                 </a>
             </nav>
-            
+
             <div class="sidebar-footer">
                 <div class="user-info" id="userInfo">
                     <div class="user-avatar">👤</div>
@@ -106,6 +110,13 @@
                             </div>
                         </div>
                         <div class="stat-card">
+                            <div class="stat-icon orange">🏢</div>
+                            <div class="stat-info">
+                                <span class="stat-value" id="totalTax">₺0</span>
+                                <span class="stat-label">Toplam Vergi</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
                             <div class="stat-icon purple">💰</div>
                             <div class="stat-info">
                                 <span class="stat-value" id="totalAmount">₺0</span>
@@ -121,31 +132,20 @@
                                 <h3>İşlem Performansı</h3>
                             </div>
                             <div class="card-body">
-                                <div class="chart-placeholder" id="performanceChart">
-                                    <div class="mini-chart">
-                                        <div class="chart-bar" style="height: 60%"></div>
-                                        <div class="chart-bar" style="height: 80%"></div>
-                                        <div class="chart-bar" style="height: 45%"></div>
-                                        <div class="chart-bar" style="height: 90%"></div>
-                                        <div class="chart-bar" style="height: 70%"></div>
-                                        <div class="chart-bar" style="height: 85%"></div>
-                                        <div class="chart-bar" style="height: 55%"></div>
-                                    </div>
+                                <div class="chart-container" style="position: relative; height:200px; width:100%">
+                                    <canvas id="performanceChart"></canvas>
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="card">
                             <div class="card-header">
                                 <h3>En Çok İşlenen Tedarikçiler</h3>
                             </div>
                             <div class="card-body">
-                                <ul class="supplier-list" id="topSuppliers">
-                                    <li class="supplier-item">
-                                        <span class="supplier-name">Henüz veri yok</span>
-                                        <span class="supplier-count">-</span>
-                                    </li>
-                                </ul>
+                                <div class="chart-container" style="position: relative; height:200px; width:100%">
+                                    <canvas id="categoryChart"></canvas>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -283,7 +283,8 @@
                             <p>Maksimum 50 dosya</p>
                             <label class="btn btn-primary">
                                 Dosyaları Seçin
-                                <input type="file" id="batchFileInput" accept=".pdf,.jpg,.jpeg,.png,.txt" multiple hidden>
+                                <input type="file" id="batchFileInput" accept=".pdf,.jpg,.jpeg,.png,.txt" multiple
+                                    hidden>
                             </label>
                         </div>
 
@@ -384,7 +385,8 @@
                                 <h3>API Anahtarı</h3>
                             </div>
                             <div class="card-body">
-                                <p class="text-muted">API anahtarınızı kullanarak harici uygulamalardan erişim sağlayabilirsiniz.</p>
+                                <p class="text-muted">API anahtarınızı kullanarak harici uygulamalardan erişim
+                                    sağlayabilirsiniz.</p>
                                 <div class="api-key-display" id="apiKeyDisplay">
                                     <code>••••••••••••••••</code>
                                     <button class="btn btn-ghost" id="showApiKey">👁️</button>
@@ -451,11 +453,13 @@
                 <form id="webhookForm">
                     <div class="form-group">
                         <label>URL</label>
-                        <input type="url" id="webhookUrl" class="form-input" placeholder="https://example.com/webhook" required>
+                        <input type="url" id="webhookUrl" class="form-input" placeholder="https://example.com/webhook"
+                            required>
                     </div>
                     <div class="form-group">
                         <label>Secret (Opsiyonel)</label>
-                        <input type="text" id="webhookSecret" class="form-input" placeholder="HMAC imzası için secret key">
+                        <input type="text" id="webhookSecret" class="form-input"
+                            placeholder="HMAC imzası için secret key">
                     </div>
                     <div class="form-group">
                         <label class="checkbox-label">
@@ -494,4 +498,5 @@
 
     <script src="app.js"></script>
 </body>
+
 </html>

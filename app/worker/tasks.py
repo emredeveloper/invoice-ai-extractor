@@ -104,6 +104,7 @@ async def save_to_mongodb(invoice_id: str, data: Dict[str, Any], status: str, er
             "currency": gen_fields.get("currency"),
             "tax_amount": clean_number(gen_fields.get("tax_amount")),
             "tax_rate": clean_number(gen_fields.get("tax_rate")),
+            "category": gen_fields.get("category", "Genel"),
             "items": [
                 {
                     **item,
