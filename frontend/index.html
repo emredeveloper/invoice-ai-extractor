@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI destekli fatura veri çıkarma sistemi - PDF, resim ve metin faturalarından otomatik veri çıkarma">
+    <title>Invoice AI - Akıllı Fatura İşleme</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-icon">📄</span>
+                    <span class="logo-text">Invoice<span class="logo-ai">AI</span></span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-page="dashboard">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-text">Dashboard</span>
+                </a>
+                <a href="#" class="nav-item" data-page="upload">
+                    <span class="nav-icon">📤</span>
+                    <span class="nav-text">Fatura Yükle</span>
+                </a>
+                <a href="#" class="nav-item" data-page="invoices">
+                    <span class="nav-icon">📋</span>
+                    <span class="nav-text">Faturalar</span>
+                </a>
+                <a href="#" class="nav-item" data-page="batch">
+                    <span class="nav-icon">📦</span>
+                    <span class="nav-text">Toplu İşlem</span>
+                </a>
+                <a href="#" class="nav-item" data-page="webhooks">
+                    <span class="nav-icon">🔔</span>
+                    <span class="nav-text">Webhooks</span>
+                </a>
+                <a href="#" class="nav-item" data-page="settings">
+                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-text">Ayarlar</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="user-info" id="userInfo">
+                    <div class="user-avatar">👤</div>
+                    <div class="user-details">
+                        <span class="user-name" id="userName">Giriş Yapın</span>
+                        <span class="user-email" id="userEmail"></span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <button class="menu-toggle" id="menuToggle">☰</button>
+                <div class="header-search">
+                    <input type="text" placeholder="Fatura ara..." id="searchInput">
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-ghost" id="themeToggle">🌙</button>
+                    <button class="btn btn-primary" id="authBtn">Giriş Yap</button>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <div class="page-content" id="pageContent">
+                <!-- Dashboard Page -->
+                <section class="page active" id="page-dashboard">
+                    <div class="page-header">
+                        <h1>Dashboard</h1>
+                        <p class="page-subtitle">Fatura işleme istatistikleriniz</p>
+                    </div>
+
+                    <!-- Stats Cards -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon blue">📄</div>
+                            <div class="stat-info">
+                                <span class="stat-value" id="totalInvoices">0</span>
+                                <span class="stat-label">Toplam Fatura</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon green">✅</div>
+                            <div class="stat-info">
+                                <span class="stat-value" id="completedInvoices">0</span>
+                                <span class="stat-label">Başarılı</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon red">❌</div>
+                            <div class="stat-info">
+                                <span class="stat-value" id="failedInvoices">0</span>
+                                <span class="stat-label">Başarısız</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon purple">💰</div>
+                            <div class="stat-info">
+                                <span class="stat-value" id="totalAmount">₺0</span>
+                                <span class="stat-label">Toplam Tutar</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Row -->
+                    <div class="charts-grid">
+                        <div class="card chart-card">
+                            <div class="card-header">
+                                <h3>İşlem Performansı</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-placeholder" id="performanceChart">
+                                    <div class="mini-chart">
+                                        <div class="chart-bar" style="height: 60%"></div>
+                                        <div class="chart-bar" style="height: 80%"></div>
+                                        <div class="chart-bar" style="height: 45%"></div>
+                                        <div class="chart-bar" style="height: 90%"></div>
+                                        <div class="chart-bar" style="height: 70%"></div>
+                                        <div class="chart-bar" style="height: 85%"></div>
+                                        <div class="chart-bar" style="height: 55%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>En Çok İşlenen Tedarikçiler</h3>
+                            </div>
+                            <div class="card-body">
+                                <ul class="supplier-list" id="topSuppliers">
+                                    <li class="supplier-item">
+                                        <span class="supplier-name">Henüz veri yok</span>
+                                        <span class="supplier-count">-</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Invoices -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Son İşlenen Faturalar</h3>
+                            <a href="#" class="btn btn-ghost" data-page="invoices">Tümünü Gör →</a>
+                        </div>
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Fatura No</th>
+                                        <th>Tedarikçi</th>
+                                        <th>Tutar</th>
+                                        <th>Durum</th>
+                                        <th>Tarih</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recentInvoicesTable">
+                                    <tr>
+                                        <td colspan="5" class="empty-state">Henüz fatura işlenmedi</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Upload Page -->
+                <section class="page" id="page-upload">
+                    <div class="page-header">
+                        <h1>Fatura Yükle</h1>
+                        <p class="page-subtitle">PDF, resim veya metin dosyası yükleyin</p>
+                    </div>
+
+                    <div class="upload-container">
+                        <div class="upload-zone" id="uploadZone">
+                            <div class="upload-icon">📁</div>
+                            <h3>Dosyayı Sürükleyip Bırakın</h3>
+                            <p>veya</p>
+                            <label class="btn btn-primary">
+                                Dosya Seçin
+                                <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.txt" hidden>
+                            </label>
+                            <p class="upload-hint">PDF, JPG, PNG, TXT - Maks. 10MB</p>
+                        </div>
+
+                        <div class="upload-progress hidden" id="uploadProgress">
+                            <div class="progress-file">
+                                <span class="file-name" id="uploadFileName">dosya.pdf</span>
+                                <span class="file-status" id="uploadStatus">Yükleniyor...</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="progressFill"></div>
+                            </div>
+                        </div>
+
+                        <div class="upload-result hidden" id="uploadResult">
+                            <div class="result-header">
+                                <span class="result-icon">✅</span>
+                                <h3>Fatura İşlendi</h3>
+                            </div>
+                            <div class="result-data" id="resultData"></div>
+                            <button class="btn btn-primary" id="uploadAnother">Başka Fatura Yükle</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Invoices Page -->
+                <section class="page" id="page-invoices">
+                    <div class="page-header">
+                        <h1>Faturalar</h1>
+                        <div class="page-actions">
+                            <button class="btn btn-secondary" id="exportCsv">📥 CSV</button>
+                            <button class="btn btn-secondary" id="exportExcel">📊 Excel</button>
+                        </div>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="filters-bar">
+                        <select id="filterStatus" class="filter-select">
+                            <option value="">Tüm Durumlar</option>
+                            <option value="completed">Başarılı</option>
+                            <option value="pending">Bekliyor</option>
+                            <option value="failed">Başarısız</option>
+                        </select>
+                        <input type="text" id="filterSupplier" placeholder="Tedarikçi ara..." class="filter-input">
+                        <input type="date" id="filterDateFrom" class="filter-input">
+                        <input type="date" id="filterDateTo" class="filter-input">
+                        <button class="btn btn-primary" id="applyFilters">Filtrele</button>
+                    </div>
+
+                    <!-- Invoices Table -->
+                    <div class="card">
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Fatura No</th>
+                                        <th>Tedarikçi</th>
+                                        <th>Tarih</th>
+                                        <th>Tutar</th>
+                                        <th>Vergi</th>
+                                        <th>Durum</th>
+                                        <th>İşlemler</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="invoicesTable">
+                                    <tr>
+                                        <td colspan="7" class="empty-state">Fatura bulunamadı</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="card-footer">
+                            <div class="pagination" id="pagination"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Batch Page -->
+                <section class="page" id="page-batch">
+                    <div class="page-header">
+                        <h1>Toplu İşlem</h1>
+                        <p class="page-subtitle">Birden fazla faturayı aynı anda işleyin</p>
+                    </div>
+
+                    <div class="batch-upload">
+                        <div class="upload-zone" id="batchUploadZone">
+                            <div class="upload-icon">📦</div>
+                            <h3>Birden Fazla Dosya Seçin</h3>
+                            <p>Maksimum 50 dosya</p>
+                            <label class="btn btn-primary">
+                                Dosyaları Seçin
+                                <input type="file" id="batchFileInput" accept=".pdf,.jpg,.jpeg,.png,.txt" multiple hidden>
+                            </label>
+                        </div>
+
+                        <div class="batch-queue hidden" id="batchQueue">
+                            <div class="queue-header">
+                                <h3>Yükleme Kuyruğu</h3>
+                                <span class="queue-count" id="queueCount">0 dosya</span>
+                            </div>
+                            <ul class="queue-list" id="queueList"></ul>
+                            <div class="queue-actions">
+                                <button class="btn btn-secondary" id="clearQueue">Temizle</button>
+                                <button class="btn btn-primary" id="startBatch">İşlemi Başlat</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Batch Jobs -->
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h3>Toplu İşlem Geçmişi</h3>
+                        </div>
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Toplam</th>
+                                        <th>Başarılı</th>
+                                        <th>Başarısız</th>
+                                        <th>Durum</th>
+                                        <th>Tarih</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="batchJobsTable">
+                                    <tr>
+                                        <td colspan="6" class="empty-state">Toplu işlem bulunamadı</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Webhooks Page -->
+                <section class="page" id="page-webhooks">
+                    <div class="page-header">
+                        <h1>Webhooks</h1>
+                        <button class="btn btn-primary" id="addWebhook">+ Webhook Ekle</button>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>URL</th>
+                                        <th>Durum</th>
+                                        <th>Başarı/Toplam</th>
+                                        <th>Son Çağrı</th>
+                                        <th>İşlemler</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="webhooksTable">
+                                    <tr>
+                                        <td colspan="5" class="empty-state">Webhook bulunamadı</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Settings Page -->
+                <section class="page" id="page-settings">
+                    <div class="page-header">
+                        <h1>Ayarlar</h1>
+                    </div>
+
+                    <div class="settings-grid">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Profil</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label>E-posta</label>
+                                    <input type="email" id="settingsEmail" class="form-input" disabled>
+                                </div>
+                                <div class="form-group">
+                                    <label>Kullanıcı Adı</label>
+                                    <input type="text" id="settingsUsername" class="form-input" disabled>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>API Anahtarı</h3>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted">API anahtarınızı kullanarak harici uygulamalardan erişim sağlayabilirsiniz.</p>
+                                <div class="api-key-display" id="apiKeyDisplay">
+                                    <code>••••••••••••••••</code>
+                                    <button class="btn btn-ghost" id="showApiKey">👁️</button>
+                                </div>
+                                <button class="btn btn-secondary mt-2" id="generateApiKey">Yeni Anahtar Oluştur</button>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Tehlikeli Bölge</h3>
+                            </div>
+                            <div class="card-body">
+                                <button class="btn btn-danger" id="logoutBtn">Çıkış Yap</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Auth Modal -->
+    <div class="modal hidden" id="authModal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="authModalTitle">Giriş Yap</h2>
+                <button class="modal-close" id="closeAuthModal">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="authForm">
+                    <div class="form-group hidden" id="usernameGroup">
+                        <label>Kullanıcı Adı</label>
+                        <input type="text" id="authUsername" class="form-input" placeholder="kullanici_adi">
+                    </div>
+                    <div class="form-group">
+                        <label>E-posta</label>
+                        <input type="email" id="authEmail" class="form-input" placeholder="ornek@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Şifre</label>
+                        <input type="password" id="authPassword" class="form-input" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block" id="authSubmit">Giriş Yap</button>
+                </form>
+                <p class="auth-switch">
+                    <span id="authSwitchText">Hesabınız yok mu?</span>
+                    <a href="#" id="authSwitchLink">Kayıt Ol</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Webhook Modal -->
+    <div class="modal hidden" id="webhookModal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Webhook Ekle</h2>
+                <button class="modal-close" id="closeWebhookModal">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="webhookForm">
+                    <div class="form-group">
+                        <label>URL</label>
+                        <input type="url" id="webhookUrl" class="form-input" placeholder="https://example.com/webhook" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Secret (Opsiyonel)</label>
+                        <input type="text" id="webhookSecret" class="form-input" placeholder="HMAC imzası için secret key">
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="webhookOnSuccess" checked>
+                            Başarılı işlemlerde bildir
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="webhookOnFailure" checked>
+                            Başarısız işlemlerde bildir
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Kaydet</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice Detail Modal -->
+    <div class="modal hidden" id="invoiceModal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>Fatura Detayı</h2>
+                <button class="modal-close" id="closeInvoiceModal">×</button>
+            </div>
+            <div class="modal-body" id="invoiceModalBody">
+                <!-- Dynamic content -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>

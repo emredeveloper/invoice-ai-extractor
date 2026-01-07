@@ -9,6 +9,7 @@ Extraction Rules:
 5. Support Turkish characters (ç, ö, ü, ı, ğ, ş) correctly.
 6. Detect the currency symbol or code (e.g., TL, USD, EUR, ₺, $, €).
 7. For taxes, look for KDV, VAT, ÖTV, Stopaj, or any other tax listed. Extract the rate as a number (e.g., 18, 20, 1).
+8. If processing multiple pages, combine all items from all pages into a single items array.
 
 Schema:
 {
@@ -39,4 +40,19 @@ Process the following invoice content and extract the data in JSON format:
 --- CONTENT START ---
 {content}
 --- CONTENT END ---
+"""
+
+MULTIPAGE_MERGE_PROMPT = """
+You are given multiple JSON extractions from different pages of the same invoice.
+Merge them into a single coherent invoice JSON following these rules:
+
+1. For general_fields: Use the first non-null value found across all pages.
+2. For items: Combine all items from all pages, avoiding duplicates.
+3. For total_amount: Use the final/grand total, usually on the last page.
+4. Remove any duplicate items that appear on multiple pages.
+
+Input JSONs:
+{json_list}
+
+Output a single merged JSON following the standard schema.
 """

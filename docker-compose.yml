@@ -1,4 +1,18 @@
 services:
+  # MongoDB Database
+  db:
+    image: mongo:6.0
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for Celery & Rate Limiting
   redis:
     image: redis/redis-stack:latest
     ports:
@@ -6,36 +20,77 @@ services:
       - "8001:8001"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
+  # FastAPI Application
   api:
     build: .
     command: uvicorn app.api.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
       - .:/app
+      - ./uploads:/app/uploads
     environment:
+      - MONGODB_URL=mongodb://db:27017
+      - DATABASE_NAME=invoice_db
+      - REDIS_URL=redis://redis:6379/1
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - PYTHONPATH=/app
+    env_file:
+      - .env
     ports:
       - "8000:8000"
     depends_on:
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  # Celery Worker
   worker:
     build: .
-    command: celery -A app.worker.tasks worker --loglevel=info --concurrency=12
+    command: celery -A app.worker.tasks worker --loglevel=info --concurrency=4
     volumes:
       - .:/app
+      - ./uploads:/app/uploads
     environment:
+      - MONGODB_URL=mongodb://db:27017
+      - DATABASE_NAME=invoice_db
+      - REDIS_URL=redis://redis:6379/1
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - PYTHONPATH=/app
+    env_file:
+      - .env
     depends_on:
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  # Prometheus (Metrics)
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    depends_on:
+      - api
+
 volumes:
+  mongodb_data:
   redis_data:
+  prometheus_data:
