@@ -192,6 +192,7 @@ async def get_invoice_file(
         raise HTTPException(status_code=404, detail="File not found on disk")
         
     return FileResponse(file_path)
+@app.get("/status/{task_id}")
 @limiter.limit("60/minute")
 async def get_status(
     request: Request,

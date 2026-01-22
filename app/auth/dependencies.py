@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, APIKeyHeader
 from typing import Optional
 
@@ -14,6 +14,7 @@ api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 async def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
     api_key: Optional[str] = Depends(api_key_header),
+    token: Optional[str] = Query(None),
 ) -> dict:
     """
     Get current user from JWT token or API key.
@@ -22,11 +23,15 @@ async def get_current_user(
     users_collection = get_users_collection()
     user = None
     
-    # Try JWT token first
+    # Try JWT token (Header or Query)
+    token_to_decode = None
     if credentials:
-        token = credentials.credentials
-        payload = decode_token(token)
-        
+        token_to_decode = credentials.credentials
+    elif token:
+        token_to_decode = token
+
+    if token_to_decode:
+        payload = decode_token(token_to_decode)
         if payload and payload.get("type") == "access":
             user_id = payload.get("sub")
             if user_id:
@@ -55,13 +60,14 @@ async def get_current_user(
 async def get_current_user_optional(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
     api_key: Optional[str] = Depends(api_key_header),
+    token: Optional[str] = Query(None),
 ) -> Optional[dict]:
     """
     Get current user if authenticated, None otherwise.
     Used for endpoints that work both with and without auth.
     """
     try:
-        return await get_current_user(credentials, api_key)
+        return await get_current_user(credentials, api_key, token)
     except HTTPException:
         return None
 

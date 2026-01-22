@@ -1223,6 +1223,79 @@ body {
     cursor: not-allowed;
 }
 
+/* ===== Agent & AI Styles ===== */
+.ai-review-section {
+    background: rgba(99, 102, 241, 0.05);
+    border: 1px solid var(--primary-light);
+    border-radius: var(--border-radius);
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.ai-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.ai-risk-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.risk-low {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--success);
+}
+
+.risk-medium {
+    background: rgba(245, 158, 11, 0.2);
+    color: var(--warning);
+}
+
+.risk-high {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--danger);
+}
+
+.ai-summary {
+    font-size: 0.9375rem;
+    color: var(--text-primary);
+    line-height: 1.5;
+}
+
+.ai-action-box {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: var(--bg-primary);
+    border-radius: var(--border-radius-sm);
+    border-left: 3px solid var(--primary);
+    font-size: 0.875rem;
+}
+
+.conversion-info {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    background: var(--bg-hover);
+    padding: 0.25rem 0.75rem;
+    border-radius: 6px;
+    margin-top: 0.5rem;
+}
+
+.conversion-rate {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 1024px) {
     .sidebar {

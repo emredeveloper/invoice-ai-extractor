@@ -74,6 +74,10 @@ class InvoiceInDB(BaseModel):
     arithmetic_validation: Optional[List[Dict[str, Any]]] = None
     tax_validation: Optional[Dict[str, Any]] = None
     
+    # Agentic data
+    ai_review: Optional[Dict[str, Any]] = None
+    conversion: Optional[Dict[str, Any]] = None
+    
     # Embedded items (denormalized for performance)
     items: List[InvoiceItemInDB] = []
     
@@ -211,6 +215,8 @@ def invoice_helper(invoice: dict) -> dict:
             {**item, "id": item.get("id") or str(uuid.uuid4())} 
             for item in invoice.get("items", [])
         ],
+        "ai_review": invoice.get("ai_review"),
+        "conversion": invoice.get("conversion"),
         "created_at": invoice.get("created_at"),
         "updated_at": invoice.get("updated_at"),
     }

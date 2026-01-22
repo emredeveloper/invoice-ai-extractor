@@ -643,6 +643,21 @@ async function viewInvoice(id) {
             }
                 </div>
                 <div class="editor-pane">
+                    ${invoice.ai_review ? `
+                        <div class="ai-review-section">
+                            <div class="ai-header">
+                                <span>🤖 AI Reviewer</span>
+                                <span class="ai-risk-badge risk-${invoice.ai_review.risk_level?.toLowerCase() || 'low'}">
+                                    ${invoice.ai_review.risk_level || 'Low'} Risk
+                                </span>
+                            </div>
+                            <p class="ai-summary">${invoice.ai_review.summary || ''}</p>
+                            <div class="ai-action-box">
+                                <strong>💡 Öneri:</strong> ${invoice.ai_review.suggested_action || 'Onayla'}
+                            </div>
+                        </div>
+                    ` : ''}
+
                     <form id="editInvoiceForm">
                         <div class="form-grid">
                             <div class="form-group">
@@ -672,6 +687,12 @@ async function viewInvoice(id) {
                             <div class="form-group">
                                 <label>Toplam Tutar</label>
                                 <input type="number" step="0.01" name="total_amount" class="form-input" value="${invoice.total_amount || ''}">
+                                ${invoice.conversion && invoice.currency !== 'TRY' ? `
+                                    <div class="conversion-info">
+                                        <span>≈ ${formatCurrency(invoice.conversion.amount_try, 'TRY')}</span>
+                                        <span class="conversion-rate">(1 ${invoice.currency} = ${invoice.conversion.rate} TRY)</span>
+                                    </div>
+                                ` : ''}
                             </div>
                             <div class="form-group">
                                 <label>Para Birimi</label>

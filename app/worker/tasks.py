@@ -14,6 +14,8 @@ from app.core.extraction_engine import ExtractionEngine, GeminiProvider, LocalLL
 from app.core.validators import DataValidator
 from app.core.webhook_service import WebhookService
 from app.core.metrics import log_invoice_processing, ACTIVE_TASKS
+from app.core.tools.exchange_rate import ExchangeRateTool
+from app.core.agents.reviewer import ReviewerAgent
 from app.database.connection import connect_to_mongo, get_invoices_collection
 from dotenv import load_dotenv
 
@@ -55,6 +57,8 @@ else:
 
 engine = ExtractionEngine(llm_provider=provider)
 webhook_service = WebhookService()
+exchange_tool = ExchangeRateTool()
+reviewer_agent = ReviewerAgent(llm_provider=provider)
 
 def clean_number(value: Any) -> Optional[float]:
     """Clean string number format (e.g., '1.500,00' -> 1500.0)."""
@@ -116,7 +120,9 @@ async def save_to_mongodb(invoice_id: str, data: Dict[str, Any], status: str, er
             "arithmetic_validation": data.get("arithmetic_validation"),
             "tax_validation": data.get("tax_validation"),
             "raw_result": data.get("raw_result"),
-            "processing_time_ms": data.get("processing_time_ms")
+            "processing_time_ms": data.get("processing_time_ms"),
+            "ai_review": data.get("ai_review"),
+            "conversion": data.get("conversion")
         })
     elif error:
         update_data["error_message"] = error
@@ -156,12 +162,23 @@ async def _process_invoice_async(file_path: str, content_type: str, invoice_id: 
         validation_results = DataValidator.validate_invoice(extraction_result)
         extraction_result.update(validation_results)
         
-        # 3. Add metadata
+        # 4. Agentic Review & Tools
+        # A. Currency Conversion
+        currency = extraction_result.get("currency", "TRY")
+        amount = extraction_result.get("total_amount", 0)
+        conversion = await exchange_tool.convert_to_try(amount, currency)
+        extraction_result["conversion"] = conversion
+
+        # B. AI Reviewer Agent
+        ai_review = await reviewer_agent.review_invoice(extraction_result)
+        extraction_result["ai_review"] = ai_review
+
+        # 5. Add metadata
         processing_time = (datetime.utcnow() - start_time).total_seconds() * 1000
         extraction_result["processing_time_ms"] = int(processing_time)
         extraction_result["raw_result"] = extraction_result.copy()
         
-        # 4. Save to Database
+        # 6. Save to Database
         await save_to_mongodb(invoice_id, extraction_result, "completed")
         
         # 5. Metrics

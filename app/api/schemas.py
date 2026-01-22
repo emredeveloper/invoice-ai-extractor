@@ -46,6 +46,10 @@ class InvoiceResponse(BaseModel):
     # Items
     items: List[InvoiceItemResponse] = []
     
+    # Agentic data
+    ai_review: Optional[Dict[str, Any]] = None
+    conversion: Optional[Dict[str, Any]] = None
+    
     created_at: datetime
     updated_at: Optional[datetime] = None
 
