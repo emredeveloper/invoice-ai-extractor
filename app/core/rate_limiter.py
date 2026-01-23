@@ -31,10 +31,13 @@ def get_user_identifier(request: Request) -> str:
 
 
 # Create limiter instance
+disable_rate_limit = os.getenv("DISABLE_RATE_LIMIT", "false").lower() in ("1", "true", "yes")
+storage_uri = "memory://" if disable_rate_limit else os.getenv("REDIS_URL", "redis://localhost:6379/1")
+
 limiter = Limiter(
     key_func=get_user_identifier,
     default_limits=[DEFAULT_RATE_LIMIT],
-    storage_uri=os.getenv("REDIS_URL", "redis://localhost:6379/1")
+    storage_uri=storage_uri
 )
 
 

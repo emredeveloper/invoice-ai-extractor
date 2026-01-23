@@ -1,10 +1,6 @@
 import os
 import asyncio
-
-# Eventlet monkey patch for Windows
-if os.name == 'nt':
-    import eventlet
-    eventlet.monkey_patch()
+from dotenv import load_dotenv
 
 from celery import Celery
 from typing import Dict, Any, Optional
@@ -17,9 +13,16 @@ from app.core.metrics import log_invoice_processing, ACTIVE_TASKS
 from app.core.tools.exchange_rate import ExchangeRateTool
 from app.core.agents.reviewer import ReviewerAgent
 from app.database.connection import connect_to_mongo, get_invoices_collection
-from dotenv import load_dotenv
 
 load_dotenv()
+
+# Allow running without Redis/Celery for local dev
+DISABLE_CELERY = os.getenv("DISABLE_CELERY", "false").lower() in ("1", "true", "yes")
+
+# Eventlet monkey patch for Windows (only when Celery is enabled)
+if not DISABLE_CELERY and os.name == 'nt':
+    import eventlet
+    eventlet.monkey_patch()
 
 # Celery Configuration
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
@@ -27,12 +30,19 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 if "redis://redis" in REDIS_URL and os.name == 'nt':
     REDIS_URL = REDIS_URL.replace("redis://redis", "redis://localhost")
 
-print(f"DEBUG: Celery is connecting to: {REDIS_URL}")
+if DISABLE_CELERY:
+    print("DEBUG: Celery disabled, using in-memory broker/backend.")
+    BROKER_URL = "memory://"
+    BACKEND_URL = "cache+memory://"
+else:
+    print(f"DEBUG: Celery is connecting to: {REDIS_URL}")
+    BROKER_URL = REDIS_URL
+    BACKEND_URL = REDIS_URL
 
 celery = Celery(
     "tasks",
-    broker=REDIS_URL,
-    backend=REDIS_URL
+    broker=BROKER_URL,
+    backend=BACKEND_URL
 )
 
 # Configuration updates

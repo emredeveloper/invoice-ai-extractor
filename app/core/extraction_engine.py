@@ -1,11 +1,13 @@
 import os
 import httpx
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from PIL import Image
 import fitz  # PyMuPDF
 import base64
 import uuid
 import logging
+import mimetypes
 from io import BytesIO
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional
@@ -23,26 +25,27 @@ class LLMProvider(ABC):
 
 class GeminiProvider(LLMProvider):
     def __init__(self, api_key: str):
-        genai.configure(api_key=api_key)
         model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-flash") # Stable default
-        self.model = genai.GenerativeModel(model_name)
+        self.model_name = model_name
+        self.client = genai.Client(api_key=api_key)
 
     async def generate_json(self, content: str, image_paths: Optional[List[str]] = None) -> Dict[str, Any]:
         prompt = f"{SYSTEM_PROMPT}\n\n{USER_PROMPT_TEMPLATE.format(content=content)}"
         
-        parts = [prompt]
+        parts = [types.Part.from_text(prompt)]
         
         # Add multiple images for multi-page support
         if image_paths:
             for img_path in image_paths:
-                img = Image.open(img_path)
-                parts.append(img)
+                with open(img_path, "rb") as img_file:
+                    img_data = img_file.read()
+                mime_type = mimetypes.guess_type(img_path)[0] or "image/png"
+                parts.append(types.Part.from_bytes(data=img_data, mime_type=mime_type))
 
-        response = self.model.generate_content(
-            parts,
-            generation_config=genai.GenerationConfig(
-                response_mime_type="application/json"
-            )
+        response = self.client.models.generate_content(
+            model=self.model_name,
+            contents=[types.Content(role="user", parts=parts)],
+            generation_config=types.GenerationConfig(response_mime_type="application/json")
         )
         return response.text
 

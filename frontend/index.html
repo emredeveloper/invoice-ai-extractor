@@ -129,9 +129,23 @@
                     <div class="charts-grid">
                         <div class="card chart-card">
                             <div class="card-header">
-                                <h3>İşlem Performansı</h3>
+                                <div class="card-title-group">
+                                    <h3>Günlük Toplam Tutar</h3>
+                                    <p class="chart-subtitle">Tamamlanan faturaların günlük toplamı (₺)</p>
+                                </div>
+                                <span class="badge badge-info" id="perfRange">Son 7 gün</span>
                             </div>
                             <div class="card-body">
+                                <div class="chart-meta">
+                                    <div class="meta-item">
+                                        <span class="meta-label">Toplam Tutar</span>
+                                        <span class="meta-value" id="perfTotal">-</span>
+                                    </div>
+                                    <div class="meta-item">
+                                        <span class="meta-label">Fatura Adedi</span>
+                                        <span class="meta-value" id="perfCount">-</span>
+                                    </div>
+                                </div>
                                 <div class="chart-container" style="position: relative; height:200px; width:100%">
                                     <canvas id="performanceChart"></canvas>
                                 </div>
@@ -189,10 +203,10 @@
                             <div class="upload-icon">📁</div>
                             <h3>Dosyayı Sürükleyip Bırakın</h3>
                             <p>veya</p>
-                            <label class="btn btn-primary">
+                            <button type="button" class="btn btn-primary" id="uploadSelectBtn">
                                 Dosya Seçin
-                                <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.txt" hidden>
-                            </label>
+                            </button>
+                            <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.txt" hidden>
                             <p class="upload-hint">PDF, JPG, PNG, TXT - Maks. 10MB</p>
                         </div>
 
@@ -281,11 +295,10 @@
                             <div class="upload-icon">📦</div>
                             <h3>Birden Fazla Dosya Seçin</h3>
                             <p>Maksimum 50 dosya</p>
-                            <label class="btn btn-primary">
+                            <button type="button" class="btn btn-primary" id="batchSelectBtn">
                                 Dosyaları Seçin
-                                <input type="file" id="batchFileInput" accept=".pdf,.jpg,.jpeg,.png,.txt" multiple
-                                    hidden>
-                            </label>
+                            </button>
+                            <input type="file" id="batchFileInput" accept=".pdf,.jpg,.jpeg,.png,.txt" multiple hidden>
                         </div>
 
                         <div class="batch-queue hidden" id="batchQueue">

@@ -13,8 +13,20 @@ class ExchangeRateTool:
 
     async def get_conversion_rate(self, from_currency: str, to_currency: str = "TRY") -> Optional[float]:
         """Fetch current conversion rate."""
-        if from_currency == to_currency:
+        if not from_currency:
+            return None
+
+        normalized = from_currency.upper()
+        if normalized in ("TL", "TRY"):
+            normalized = "TRY"
+
+        target = to_currency.upper()
+
+        if normalized == target:
             return 1.0
+
+        from_currency = normalized
+        to_currency = target
             
         try:
             async with httpx.AsyncClient() as client:

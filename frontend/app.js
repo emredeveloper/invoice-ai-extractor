@@ -34,6 +34,7 @@ const elements = {
 
     // Upload
     uploadZone: document.getElementById('uploadZone'),
+    uploadSelectBtn: document.getElementById('uploadSelectBtn'),
     fileInput: document.getElementById('fileInput'),
     uploadProgress: document.getElementById('uploadProgress'),
     uploadFileName: document.getElementById('uploadFileName'),
@@ -56,6 +57,7 @@ const elements = {
 
     // Batch
     batchUploadZone: document.getElementById('batchUploadZone'),
+    batchSelectBtn: document.getElementById('batchSelectBtn'),
     batchFileInput: document.getElementById('batchFileInput'),
     batchQueue: document.getElementById('batchQueue'),
     queueList: document.getElementById('queueList'),
@@ -103,6 +105,11 @@ const elements = {
 
     // Toast
     toastContainer: document.getElementById('toastContainer'),
+
+    // Performance chart meta
+    perfRange: document.getElementById('perfRange'),
+    perfTotal: document.getElementById('perfTotal'),
+    perfCount: document.getElementById('perfCount'),
 };
 
 // ===== State =====
@@ -110,6 +117,7 @@ let isLoginMode = true;
 let batchFiles = [];
 let currentPage = 1;
 let totalPages = 1;
+const dialogLocks = { upload: false, batch: false };
 let charts = {
     performance: null,
     category: null
@@ -129,10 +137,21 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
+function normalizeCurrency(code) {
+    if (!code) return 'TL';
+    const upper = String(code).toUpperCase();
+    if (upper === 'TRY') return 'TL';
+    return upper;
+}
+
+function isTryCurrency(code) {
+    return normalizeCurrency(code) === 'TL';
+}
+
 function formatCurrency(amount, currency = 'TL') {
     if (amount === null || amount === undefined) return '-';
     const symbols = { TL: '₺', USD: '$', EUR: '€' };
-    const cleanCurrency = currency || 'TL';
+    const cleanCurrency = normalizeCurrency(currency);
     const symbol = symbols[cleanCurrency] || cleanCurrency;
     return `${symbol}${Number(amount).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}`;
 }
@@ -150,6 +169,13 @@ function getStatusBadge(status) {
         failed: '<span class="badge badge-danger">Başarısız</span>',
     };
     return badges[status] || `<span class="badge">${status}</span>`;
+}
+
+function openFileDialog(input, lockKey) {
+    if (dialogLocks[lockKey]) return;
+    dialogLocks[lockKey] = true;
+    input.value = '';
+    input.click();
 }
 
 // ===== API Functions =====
@@ -391,6 +417,16 @@ async function loadDashboard() {
             `).join('');
         }
 
+        const trend = stats.spending_trend || [];
+        const trendTotals = trend.map(d => d.total || 0);
+        const trendCounts = trend.map(d => d.count || 0);
+        const totalAmount = trendTotals.reduce((sum, v) => sum + v, 0);
+        const totalCount = trendCounts.reduce((sum, v) => sum + v, 0);
+
+        if (elements.perfRange) elements.perfRange.textContent = 'Son 7 gün';
+        if (elements.perfTotal) elements.perfTotal.textContent = formatCurrency(totalAmount, 'TL');
+        if (elements.perfCount) elements.perfCount.textContent = `${totalCount} fatura`;
+
         // --- Performance Chart (Spending Trend) ---
         const perfCtx = document.getElementById('performanceChart').getContext('2d');
         if (charts.performance) charts.performance.destroy();
@@ -398,10 +434,10 @@ async function loadDashboard() {
         charts.performance = new Chart(perfCtx, {
             type: 'line',
             data: {
-                labels: stats.spending_trend.map(d => formatDate(d.date)),
+                labels: trend.map(d => formatDate(d.date)),
                 datasets: [{
-                    label: 'Harcama (₺)',
-                    data: stats.spending_trend.map(d => d.total),
+                    label: 'Günlük toplam (₺)',
+                    data: trendTotals,
                     borderColor: '#6366f1',
                     backgroundColor: 'rgba(99, 102, 241, 0.1)',
                     borderWidth: 3,
@@ -414,7 +450,19 @@ async function loadDashboard() {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                const idx = context.dataIndex;
+                                const amount = formatCurrency(trendTotals[idx], 'TL');
+                                const count = trendCounts[idx] || 0;
+                                return [`Toplam: ${amount}`, `Adet: ${count}`];
+                            }
+                        }
+                    }
+                },
                 scales: {
                     y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
                     x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
@@ -495,7 +543,7 @@ async function handleFileUpload(file) {
 }
 
 function displayUploadResult(result) {
-    const currency = result.currency || 'TL';
+    const currency = normalizeCurrency(result.currency || 'TL');
 
     // Check if result has general_fields or is flattened
     const data = result.general_fields || result;
@@ -538,7 +586,7 @@ function displayUploadResult(result) {
                                 <tr>
                                     <td>${item.product_name || '-'}</td>
                                     <td>${item.quantity || '-'}</td>
-                                    <td>${formatCurrency(item.total_price, currency)}</td>
+                    <td>${formatCurrency(item.total_price, currency)}</td>
                                 </tr>
                             `).join('')}
                             ${result.items.length > 5 ? `<tr><td colspan="3" style="text-align:center; padding: 10px; font-style: italic; color: var(--text-muted);">...ve ${result.items.length - 5} kalem daha</td></tr>` : ''}
@@ -687,10 +735,10 @@ async function viewInvoice(id) {
                             <div class="form-group">
                                 <label>Toplam Tutar</label>
                                 <input type="number" step="0.01" name="total_amount" class="form-input" value="${invoice.total_amount || ''}">
-                                ${invoice.conversion && invoice.currency !== 'TRY' ? `
+                                ${invoice.conversion && !isTryCurrency(invoice.currency) ? `
                                     <div class="conversion-info">
                                         <span>≈ ${formatCurrency(invoice.conversion.amount_try, 'TRY')}</span>
-                                        <span class="conversion-rate">(1 ${invoice.currency} = ${invoice.conversion.rate} TRY)</span>
+                                        <span class="conversion-rate">(1 ${normalizeCurrency(invoice.currency)} = ${invoice.conversion.rate} TRY)</span>
                                     </div>
                                 ` : ''}
                             </div>
@@ -1066,7 +1114,14 @@ function initEventListeners() {
     });
 
     // Upload
-    elements.uploadZone.addEventListener('click', () => elements.fileInput.click());
+    elements.uploadZone.addEventListener('click', (e) => {
+        if (e.target !== e.currentTarget) return;
+        openFileDialog(elements.fileInput, 'upload');
+    });
+    elements.uploadSelectBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        openFileDialog(elements.fileInput, 'upload');
+    });
     elements.uploadZone.addEventListener('dragover', (e) => {
         e.preventDefault();
         elements.uploadZone.classList.add('dragover');
@@ -1080,6 +1135,7 @@ function initEventListeners() {
         if (e.dataTransfer.files[0]) handleFileUpload(e.dataTransfer.files[0]);
     });
     elements.fileInput.addEventListener('change', (e) => {
+        dialogLocks.upload = false;
         if (e.target.files[0]) handleFileUpload(e.target.files[0]);
     });
     elements.uploadAnother.addEventListener('click', () => {
@@ -1097,8 +1153,18 @@ function initEventListeners() {
     elements.exportExcel.addEventListener('click', () => exportInvoices('excel'));
 
     // Batch
-    elements.batchUploadZone.addEventListener('click', () => elements.batchFileInput.click());
-    elements.batchFileInput.addEventListener('change', (e) => handleBatchFiles(e.target.files));
+    elements.batchUploadZone.addEventListener('click', (e) => {
+        if (e.target !== e.currentTarget) return;
+        openFileDialog(elements.batchFileInput, 'batch');
+    });
+    elements.batchSelectBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        openFileDialog(elements.batchFileInput, 'batch');
+    });
+    elements.batchFileInput.addEventListener('change', (e) => {
+        dialogLocks.batch = false;
+        handleBatchFiles(e.target.files);
+    });
     elements.clearQueue.addEventListener('click', () => {
         batchFiles = [];
         elements.batchQueue.classList.add('hidden');
@@ -1125,6 +1191,12 @@ function initEventListeners() {
         backdrop.addEventListener('click', () => {
             closeModal(backdrop.closest('.modal'));
         });
+    });
+
+    // Reset dialog locks when file picker closes without selection
+    window.addEventListener('focus', () => {
+        dialogLocks.upload = false;
+        dialogLocks.batch = false;
     });
 }
 

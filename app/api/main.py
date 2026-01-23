@@ -1,4 +1,5 @@
 import os
+import asyncio
 import shutil
 import uuid
 from contextlib import asynccontextmanager
@@ -15,7 +16,7 @@ from typing import Optional, Dict, Any
 
 from app.database.connection import connect_to_mongo, close_mongo_connection, get_invoices_collection
 from app.database.models import generate_id
-from app.worker.tasks import celery
+from app.worker.tasks import celery, _process_invoice_async, DISABLE_CELERY
 from app.auth.router import router as auth_router
 from app.auth.dependencies import get_current_user, get_current_user_optional
 from app.api.invoices import router as invoices_router
@@ -68,6 +69,8 @@ app.include_router(batch_router)
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+LOCAL_TASKS = {}
+
 
 class TaskStatus(BaseModel):
     task_id: str
@@ -95,12 +98,15 @@ async def health_check():
         health["status"] = "unhealthy"
         
     # Check Redis/Celery
-    try:
-        celery.control.ping(timeout=0.5)
-        health["checks"]["redis"] = "ok"
-    except Exception as e:
-        health["checks"]["redis"] = str(e)
-        if health["status"] == "healthy": health["status"] = "degraded"
+    if DISABLE_CELERY:
+        health["checks"]["redis"] = "disabled"
+    else:
+        try:
+            celery.control.ping(timeout=0.5)
+            health["checks"]["redis"] = "ok"
+        except Exception as e:
+            health["checks"]["redis"] = str(e)
+            if health["status"] == "healthy": health["status"] = "degraded"
 
     return health
 
@@ -151,6 +157,24 @@ async def upload_invoice(
     invoices = get_invoices_collection()
     await invoices.insert_one(invoice_doc)
     
+    if DISABLE_CELERY:
+        task_id = str(uuid.uuid4())
+        await invoices.update_one({"_id": invoice_id}, {"$set": {"task_id": task_id}})
+        LOCAL_TASKS[task_id] = {"status": "PENDING", "result": None}
+
+        async def run_local_task():
+            try:
+                LOCAL_TASKS[task_id]["status"] = "STARTED"
+                result = await _process_invoice_async(
+                    file_path, file.content_type, invoice_id, current_user["id"]
+                )
+                LOCAL_TASKS[task_id] = {"status": "SUCCESS", "result": result}
+            except Exception as exc:
+                LOCAL_TASKS[task_id] = {"status": "FAILED", "result": {"error": str(exc)}}
+
+        asyncio.create_task(run_local_task())
+        return {"task_id": task_id, "invoice_id": invoice_id}
+
     # Trigger task
     task = celery.send_task(
         "tasks.process_invoice_task", 
@@ -200,6 +224,17 @@ async def get_status(
     current_user: dict = Depends(get_current_user_optional)
 ):
     """Get task status."""
+    if DISABLE_CELERY:
+        task = LOCAL_TASKS.get(task_id)
+        if not task:
+            return {"task_id": task_id, "status": "PENDING"}
+        response = {"task_id": task_id, "status": task["status"]}
+        if task["status"] == "FAILED":
+            response["result"] = task.get("result") or {"error": "Processing failed"}
+        elif task["status"] == "SUCCESS":
+            response["result"] = task.get("result")
+        return response
+
     task_result = celery.AsyncResult(task_id)
     response = {"task_id": task_id, "status": task_result.status}
     
