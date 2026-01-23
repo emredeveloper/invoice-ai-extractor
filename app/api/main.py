@@ -70,6 +70,7 @@ UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 LOCAL_TASKS = {}
+LOCAL_TASK_TIMEOUT_SECONDS = int(os.getenv("LOCAL_TASK_TIMEOUT_SECONDS", "180"))
 
 
 class TaskStatus(BaseModel):
@@ -165,10 +166,13 @@ async def upload_invoice(
         async def run_local_task():
             try:
                 LOCAL_TASKS[task_id]["status"] = "STARTED"
-                result = await _process_invoice_async(
-                    file_path, file.content_type, invoice_id, current_user["id"]
+                result = await asyncio.wait_for(
+                    _process_invoice_async(file_path, file.content_type, invoice_id, current_user["id"]),
+                    timeout=LOCAL_TASK_TIMEOUT_SECONDS,
                 )
                 LOCAL_TASKS[task_id] = {"status": "SUCCESS", "result": result}
+            except asyncio.TimeoutError:
+                LOCAL_TASKS[task_id] = {"status": "FAILED", "result": {"error": "processing_timeout"}}
             except Exception as exc:
                 LOCAL_TASKS[task_id] = {"status": "FAILED", "result": {"error": str(exc)}}
 

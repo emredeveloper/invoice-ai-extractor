@@ -6,9 +6,9 @@ Extraction Rules:
 2. Extract line items: product_name, quantity, unit_price, total_price, description.
 3. If a field is missing, use null.
 4. Return ONLY valid JSON that matches the required schema.
-5. Support Turkish characters (ç, ö, ü, ı, ğ, ş) correctly.
-6. Detect the currency symbol or code (e.g., TL, USD, EUR, ₺, $, €).
-7. For taxes, look for KDV, VAT, ÖTV, Stopaj, or any other tax listed. Extract the rate as a number (e.g., 18, 20, 1).
+5. Support international characters and diacritics correctly (e.g., Turkish characters: ?, ?, ?, ?, ?, ?).
+6. Detect the currency symbol or code (e.g., TRY, USD, EUR, ?, $, ?).
+7. For taxes, look for VAT, GST, KDV, ?TV, Stopaj, or any other tax listed. Extract the rate as a number (e.g., 18, 20, 1).
 8. If processing multiple pages, combine all items from all pages into a single items array.
 
 Schema:
@@ -18,10 +18,10 @@ Schema:
     "date": "string or null",
     "supplier_name": "string or null",
     "total_amount": "number or null",
-    "currency": "string or null (e.g., TL, USD, EUR)",
+    "currency": "string or null (e.g., TRY, USD, EUR)",
     "tax_amount": "number or null (total tax found on invoice)",
     "tax_rate": "number or null (e.g., 18, 20, 8, 1)",
-    "category": "string (one of: Akaryakıt, Gıda, Teknoloji, Lojistik, Hizmet, Kırtasiye, Genel)"
+    "category": "string (one of: Fuel, Food, Technology, Logistics, Services, Stationery, General)"
   },
   "items": [
     {

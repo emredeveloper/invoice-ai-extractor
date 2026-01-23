@@ -138,35 +138,35 @@ function showToast(message, type = 'info') {
 }
 
 function normalizeCurrency(code) {
-    if (!code) return 'TL';
+    if (!code) return 'TRY';
     const upper = String(code).toUpperCase();
-    if (upper === 'TRY') return 'TL';
+    if (upper === 'TL' || upper === 'TRY') return 'TRY';
     return upper;
 }
 
 function isTryCurrency(code) {
-    return normalizeCurrency(code) === 'TL';
+    return normalizeCurrency(code) === 'TRY';
 }
 
-function formatCurrency(amount, currency = 'TL') {
+function formatCurrency(amount, currency = 'TRY') {
     if (amount === null || amount === undefined) return '-';
-    const symbols = { TL: '₺', USD: '$', EUR: '€' };
+    const symbols = { TRY: '₺', USD: '$', EUR: '€' };
     const cleanCurrency = normalizeCurrency(currency);
     const symbol = symbols[cleanCurrency] || cleanCurrency;
-    return `${symbol}${Number(amount).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}`;
+    return `${symbol}${Number(amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 }
 
 function formatDate(dateStr) {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('tr-TR');
+    return new Date(dateStr).toLocaleDateString('en-US');
 }
 
 function getStatusBadge(status) {
     const badges = {
-        completed: '<span class="badge badge-success">Başarılı</span>',
-        pending: '<span class="badge badge-warning">Bekliyor</span>',
-        processing: '<span class="badge badge-info">İşleniyor</span>',
-        failed: '<span class="badge badge-danger">Başarısız</span>',
+        completed: '<span class="badge badge-success">Successful</span>',
+        pending: '<span class="badge badge-warning">Pending</span>',
+        processing: '<span class="badge badge-info">Processing</span>',
+        failed: '<span class="badge badge-danger">Failed</span>',
     };
     return badges[status] || `<span class="badge">${status}</span>`;
 }
@@ -230,12 +230,12 @@ async function uploadFile(file) {
 
     if (response.status === 401) {
         logout();
-        throw new Error('Oturumunuz sona ermiş veya yetkisiz erişim. Lütfen tekrar giriş yapın.');
+            throw new Error('Your session has expired or you are not authorized. Please sign in again.');
     }
 
     if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.detail || 'Dosya yüklenemedi');
+        throw new Error(error.detail || 'File upload failed');
     }
 
     return await response.json();
@@ -274,7 +274,7 @@ async function login(email, password) {
     localStorage.setItem('refreshToken', data.refresh_token);
 
     await loadCurrentUser();
-    showToast('Giriş başarılı!', 'success');
+    showToast('Signed in successfully!', 'success');
 }
 
 async function register(email, username, password) {
@@ -283,7 +283,7 @@ async function register(email, username, password) {
         body: JSON.stringify({ email, username, password }),
     });
 
-    showToast('Kayıt başarılı! Giriş yapabilirsiniz.', 'success');
+    showToast('Registration successful! You can sign in now.', 'success');
     toggleAuthMode();
 }
 
@@ -302,15 +302,15 @@ function updateUserUI() {
     if (currentUser) {
         elements.userName.textContent = currentUser.username;
         elements.userEmail.textContent = currentUser.email;
-        elements.authBtn.textContent = 'Çıkış Yap';
+        elements.authBtn.textContent = 'Sign Out';
         elements.authBtn.onclick = logout;
 
         elements.settingsEmail.value = currentUser.email;
         elements.settingsUsername.value = currentUser.username;
     } else {
-        elements.userName.textContent = 'Giriş Yapın';
+        elements.userName.textContent = 'Sign In';
         elements.userEmail.textContent = '';
-        elements.authBtn.textContent = 'Giriş Yap';
+        elements.authBtn.textContent = 'Sign In';
         elements.authBtn.onclick = () => openModal(elements.authModal);
     }
 }
@@ -321,7 +321,7 @@ function logout() {
     localStorage.removeItem('authToken');
     localStorage.removeItem('refreshToken');
     updateUserUI();
-    showToast('Çıkış yapıldı', 'info');
+    showToast('Signed out', 'info');
     navigateTo('dashboard');
 }
 
@@ -329,17 +329,17 @@ function toggleAuthMode() {
     isLoginMode = !isLoginMode;
 
     if (isLoginMode) {
-        elements.authModalTitle.textContent = 'Giriş Yap';
+        elements.authModalTitle.textContent = 'Sign In';
         elements.usernameGroup.classList.add('hidden');
-        elements.authSubmit.textContent = 'Giriş Yap';
-        elements.authSwitchText.textContent = 'Hesabınız yok mu?';
-        elements.authSwitchLink.textContent = 'Kayıt Ol';
+        elements.authSubmit.textContent = 'Sign In';
+        elements.authSwitchText.textContent = "Don't have an account?";
+        elements.authSwitchLink.textContent = 'Sign Up';
     } else {
-        elements.authModalTitle.textContent = 'Kayıt Ol';
+        elements.authModalTitle.textContent = 'Sign Up';
         elements.usernameGroup.classList.remove('hidden');
-        elements.authSubmit.textContent = 'Kayıt Ol';
-        elements.authSwitchText.textContent = 'Zaten hesabınız var mı?';
-        elements.authSwitchLink.textContent = 'Giriş Yap';
+        elements.authSubmit.textContent = 'Sign Up';
+        elements.authSwitchText.textContent = 'Already have an account?';
+        elements.authSwitchLink.textContent = 'Sign In';
     }
 }
 
@@ -423,8 +423,8 @@ async function loadDashboard() {
         const totalAmount = trendTotals.reduce((sum, v) => sum + v, 0);
         const totalCount = trendCounts.reduce((sum, v) => sum + v, 0);
 
-        if (elements.perfRange) elements.perfRange.textContent = 'Son 7 gün';
-        if (elements.perfTotal) elements.perfTotal.textContent = formatCurrency(totalAmount, 'TL');
+        if (elements.perfRange) elements.perfRange.textContent = 'Last 7 days';
+        if (elements.perfTotal) elements.perfTotal.textContent = formatCurrency(totalAmount, 'TRY');
         if (elements.perfCount) elements.perfCount.textContent = `${totalCount} fatura`;
 
         // --- Performance Chart (Spending Trend) ---
@@ -436,7 +436,7 @@ async function loadDashboard() {
             data: {
                 labels: trend.map(d => formatDate(d.date)),
                 datasets: [{
-                    label: 'Günlük toplam (₺)',
+                    label: 'Daily total (TRY)',
                     data: trendTotals,
                     borderColor: '#6366f1',
                     backgroundColor: 'rgba(99, 102, 241, 0.1)',
@@ -456,7 +456,7 @@ async function loadDashboard() {
                         callbacks: {
                             label: (context) => {
                                 const idx = context.dataIndex;
-                                const amount = formatCurrency(trendTotals[idx], 'TL');
+                                const amount = formatCurrency(trendTotals[idx], 'TRY');
                                 const count = trendCounts[idx] || 0;
                                 return [`Toplam: ${amount}`, `Adet: ${count}`];
                             }
@@ -512,21 +512,21 @@ async function handleFileUpload(file) {
     elements.uploadResult.classList.add('hidden');
 
     elements.uploadFileName.textContent = file.name;
-    elements.uploadStatus.textContent = 'Yükleniyor...';
+    elements.uploadStatus.textContent = 'Uploading...';
     elements.progressFill.style.width = '30%';
 
     try {
         const { task_id } = await uploadFile(file);
 
-        elements.uploadStatus.textContent = 'İşleniyor...';
+        elements.uploadStatus.textContent = 'Processing...';
         elements.progressFill.style.width = '60%';
 
         const result = await pollTaskStatus(task_id, (status) => {
-            elements.uploadStatus.textContent = status === 'STARTED' ? 'Analiz ediliyor...' : 'Bekliyor...';
+            elements.uploadStatus.textContent = status === 'STARTED' ? 'Analyzing...' : 'Pending...';
         });
 
         elements.progressFill.style.width = '100%';
-        elements.uploadStatus.textContent = 'Tamamlandı!';
+        elements.uploadStatus.textContent = 'Completed!';
 
         setTimeout(() => {
             elements.uploadProgress.classList.add('hidden');
@@ -534,7 +534,7 @@ async function handleFileUpload(file) {
             displayUploadResult(result);
         }, 500);
 
-        showToast('Fatura başarıyla işlendi!', 'success');
+        showToast('Invoice processed successfully!', 'success');
     } catch (error) {
         elements.uploadStatus.textContent = 'Hata!';
         elements.progressFill.style.background = 'var(--danger)';
@@ -543,7 +543,7 @@ async function handleFileUpload(file) {
 }
 
 function displayUploadResult(result) {
-    const currency = normalizeCurrency(result.currency || 'TL');
+    const currency = normalizeCurrency(result.currency || 'TRY');
 
     // Check if result has general_fields or is flattened
     const data = result.general_fields || result;
@@ -553,11 +553,11 @@ function displayUploadResult(result) {
         <div class="invoice-summary">
             <div class="summary-grid">
                 <div class="summary-item">
-                    <label>Fatura No</label>
+                    <label>Invoice No</label>
                     <span class="value">${data.invoice_number || '-'}</span>
                 </div>
                 <div class="summary-item">
-                    <label>Tedarikçi</label>
+                    <label>Supplier</label>
                     <span class="value">${data.supplier_name || '-'}</span>
                 </div>
                 <div class="summary-item">
@@ -571,12 +571,12 @@ function displayUploadResult(result) {
             </div>
 
             ${result.items && result.items.length > 0 ? `
-                <div class="summary-items-title">Fatura Kalemleri</div>
+                <div class="summary-items-title">Invoice Line Items</div>
                 <div class="summary-items-list">
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Ürün / Hizmet</th>
+                                <th>Product / Service</th>
                                 <th>Adet</th>
                                 <th>Toplam</th>
                             </tr>
@@ -596,9 +596,9 @@ function displayUploadResult(result) {
             ` : ''}
 
             <div class="summary-meta">
-                <span>İşlem Süresi: ${(result.processing_time_ms / 1000).toFixed(2)}sn</span>
+                <span>Processing Time: ${(result.processing_time_ms / 1000).toFixed(2)}sn</span>
                 <span>•</span>
-                <span>Güven Skoru: %${Math.round((result.confidence || 0.95) * 100)}</span>
+                <span>Confidence Score: %${Math.round((result.confidence || 0.95) * 100)}</span>
             </div>
         </div>
     `;
@@ -607,7 +607,7 @@ function displayUploadResult(result) {
 // ===== Invoices =====
 async function loadInvoices(page = 1) {
     if (!authToken) {
-        elements.invoicesTable.innerHTML = '<tr><td colspan="7" class="empty-state">Giriş yapmanız gerekiyor</td></tr>';
+        elements.invoicesTable.innerHTML = '<tr><td colspan="7" class="empty-state">You need to sign in</td></tr>';
         return;
     }
 
@@ -627,7 +627,7 @@ async function loadInvoices(page = 1) {
         totalPages = data.total_pages;
 
         if (data.items.length === 0) {
-            elements.invoicesTable.innerHTML = '<tr><td colspan="7" class="empty-state">Fatura bulunamadı</td></tr>';
+            elements.invoicesTable.innerHTML = '<tr><td colspan="7" class="empty-state">No invoices found</td></tr>';
         } else {
             elements.invoicesTable.innerHTML = data.items.map(inv => `
                 <tr>
@@ -647,7 +647,7 @@ async function loadInvoices(page = 1) {
 
         renderPagination();
     } catch (error) {
-        showToast('Faturalar yüklenemedi', 'error');
+        showToast('Failed to load invoices', 'error');
     }
 }
 
@@ -701,7 +701,7 @@ async function viewInvoice(id) {
                             </div>
                             <p class="ai-summary">${invoice.ai_review.summary || ''}</p>
                             <div class="ai-action-box">
-                                <strong>💡 Öneri:</strong> ${invoice.ai_review.suggested_action || 'Onayla'}
+                                <strong>💡 Suggestion:</strong> ${invoice.ai_review.suggested_action || 'Approve'}
                             </div>
                         </div>
                     ` : ''}
@@ -709,7 +709,7 @@ async function viewInvoice(id) {
                     <form id="editInvoiceForm">
                         <div class="form-grid">
                             <div class="form-group">
-                                <label>Fatura No</label>
+                                <label>Invoice No</label>
                                 <input type="text" name="invoice_number" class="form-input" value="${invoice.invoice_number || ''}">
                             </div>
                             <div class="form-group">
@@ -717,19 +717,19 @@ async function viewInvoice(id) {
                                 <input type="text" name="invoice_date" class="form-input" value="${invoice.invoice_date || ''}">
                             </div>
                             <div class="form-group">
-                                <label>Tedarikçi</label>
+                                <label>Supplier</label>
                                 <input type="text" name="supplier_name" class="form-input" value="${invoice.supplier_name || ''}">
                             </div>
                             <div class="form-group">
                                 <label>Kategori</label>
                                 <select name="category" class="form-input">
-                                    <option value="Genel" ${invoice.category === 'Genel' ? 'selected' : ''}>Genel</option>
-                                    <option value="Akaryakıt" ${invoice.category === 'Akaryakıt' ? 'selected' : ''}>Akaryakıt</option>
-                                    <option value="Gıda" ${invoice.category === 'Gıda' ? 'selected' : ''}>Gıda</option>
-                                    <option value="Teknoloji" ${invoice.category === 'Teknoloji' ? 'selected' : ''}>Teknoloji</option>
-                                    <option value="Lojistik" ${invoice.category === 'Lojistik' ? 'selected' : ''}>Lojistik</option>
-                                    <option value="Hizmet" ${invoice.category === 'Hizmet' ? 'selected' : ''}>Hizmet</option>
-                                    <option value="Kırtasiye" ${invoice.category === 'Kırtasiye' ? 'selected' : ''}>Kırtasiye</option>
+                                    <option value="General" ${invoice.category === 'General' ? 'selected' : ''}>General</option>
+                                    <option value="Fuel" ${invoice.category === 'Fuel' ? 'selected' : ''}>Fuel</option>
+                                    <option value="Food" ${invoice.category === 'Food' ? 'selected' : ''}>Food</option>
+                                    <option value="Technology" ${invoice.category === 'Technology' ? 'selected' : ''}>Technology</option>
+                                    <option value="Logistics" ${invoice.category === 'Logistics' ? 'selected' : ''}>Logistics</option>
+                                    <option value="Services" ${invoice.category === 'Services' ? 'selected' : ''}>Services</option>
+                                    <option value="Stationery" ${invoice.category === 'Stationery' ? 'selected' : ''}>Stationery</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -747,22 +747,22 @@ async function viewInvoice(id) {
                                 <input type="text" name="currency" class="form-input" value="${invoice.currency || ''}">
                             </div>
                             <div class="form-group">
-                                <label>Vergi Tutarı</label>
+                                <label>Tax Amount</label>
                                 <input type="number" step="0.01" name="tax_amount" class="form-input" value="${invoice.tax_amount || ''}">
                             </div>
                             <div class="form-group">
-                                <label>Vergi Oranı (%)</label>
+                                <label>Tax Rate (%)</label>
                                 <input type="number" name="tax_rate" class="form-input" value="${invoice.tax_rate || ''}">
                             </div>
                         </div>
 
                         <div class="mt-4">
-                            <h4>Fatura Kalemleri</h4>
+                            <h4>Invoice Line Items</h4>
                             <div class="items-editor">
                                 <table class="data-table">
                                     <thead>
                                         <tr>
-                                            <th>Ürün</th>
+                                            <th>Item</th>
                                             <th>Adet</th>
                                             <th>Fiyat</th>
                                         </tr>
@@ -788,14 +788,14 @@ async function viewInvoice(id) {
                         </div>
 
                         <div class="form-actions mt-4">
-                            <button type="button" class="btn btn-primary" onclick="saveInvoice('${id}')">Değişiklikleri Kaydet</button>
+                            <button type="button" class="btn btn-primary" onclick="saveInvoice('${id}')">Save Changes</button>
                         </div>
                     </form>
                 </div>
             </div>
         `;
     } catch (error) {
-        showToast('Fatura detayı yüklenemedi', 'error');
+        showToast('Failed to load invoice details', 'error');
     }
 }
 
@@ -816,30 +816,30 @@ async function saveInvoice(id) {
             body: JSON.stringify(data),
         });
 
-        showToast('Fatura güncellendi!', 'success');
+        showToast('Invoice updated!', 'success');
         closeModal(elements.invoiceModal); // Close modal after saving
         loadInvoices(currentPage);
         loadDashboard();
     } catch (error) {
-        showToast('Güncelleme başarısız', 'error');
+        showToast('Update failed', 'error');
     }
 }
 
 async function deleteInvoice(id) {
-    if (!confirm('Bu faturayı silmek istediğinizden emin misiniz?')) return;
+    if (!confirm('Are you sure you want to delete this invoice?')) return;
 
     try {
         await apiRequest(`/invoices/${id}`, { method: 'DELETE' });
-        showToast('Fatura silindi', 'success');
+        showToast('Invoice deleted', 'success');
         loadInvoices(currentPage);
     } catch (error) {
-        showToast('Fatura silinemedi', 'error');
+        showToast('Failed to delete invoice', 'error');
     }
 }
 
 async function exportInvoices(format) {
     if (!authToken) {
-        showToast('Giriş yapmanız gerekiyor', 'warning');
+        showToast('You need to sign in', 'warning');
         return;
     }
 
@@ -863,9 +863,9 @@ async function exportInvoices(format) {
         a.click();
         URL.revokeObjectURL(url);
 
-        showToast('Dışa aktarma başarılı!', 'success');
+        showToast('Export successful!', 'success');
     } catch (error) {
-        showToast('Dışa aktarma başarısız', 'error');
+        showToast('Export failed', 'error');
     }
 }
 
@@ -875,7 +875,7 @@ function handleBatchFiles(files) {
 
     if (batchFiles.length > 0) {
         elements.batchQueue.classList.remove('hidden');
-        elements.queueCount.textContent = `${batchFiles.length} dosya`;
+        elements.queueCount.textContent = `${batchFiles.length} files`;
 
         elements.queueList.innerHTML = batchFiles.map((file, i) => `
             <li class="queue-item">
@@ -897,7 +897,7 @@ function removeBatchFile(index) {
 
 async function startBatchUpload() {
     if (!authToken) {
-        showToast('Giriş yapmanız gerekiyor', 'warning');
+        showToast('You need to sign in', 'warning');
         return;
     }
 
@@ -918,13 +918,13 @@ async function startBatchUpload() {
         if (!response.ok) throw new Error('Batch upload failed');
 
         const result = await response.json();
-        showToast(`Toplu işlem başlatıldı: ${result.total_files} dosya`, 'success');
+        showToast(`Batch started: ${result.total_files} files`, 'success');
 
         batchFiles = [];
         elements.batchQueue.classList.add('hidden');
         loadBatchJobs();
     } catch (error) {
-        showToast('Toplu yükleme başarısız', 'error');
+        showToast('Batch upload failed', 'error');
     }
 }
 
@@ -936,7 +936,7 @@ async function loadBatchJobs() {
         let hasProcessing = false;
 
         if (jobs.length === 0) {
-            elements.batchJobsTable.innerHTML = '<tr><td colspan="6" class="empty-state">Toplu işlem bulunamadı</td></tr>';
+            elements.batchJobsTable.innerHTML = '<tr><td colspan="6" class="empty-state">No batch jobs found</td></tr>';
         } else {
             elements.batchJobsTable.innerHTML = jobs.map(job => {
                 if (job.status === 'processing' || job.status === 'pending') hasProcessing = true;
@@ -967,7 +967,7 @@ async function loadBatchJobs() {
 // ===== Webhooks =====
 async function loadWebhooks() {
     if (!authToken) {
-        elements.webhooksTable.innerHTML = '<tr><td colspan="5" class="empty-state">Giriş yapmanız gerekiyor</td></tr>';
+        elements.webhooksTable.innerHTML = '<tr><td colspan="5" class="empty-state">You need to sign in</td></tr>';
         return;
     }
 
@@ -975,7 +975,7 @@ async function loadWebhooks() {
         const webhooks = await apiRequest('/webhooks');
 
         if (webhooks.length === 0) {
-            elements.webhooksTable.innerHTML = '<tr><td colspan="5" class="empty-state">Webhook bulunamadı</td></tr>';
+            elements.webhooksTable.innerHTML = '<tr><td colspan="5" class="empty-state">No webhooks found</td></tr>';
         } else {
             elements.webhooksTable.innerHTML = webhooks.map(wh => `
                 <tr>
@@ -991,7 +991,7 @@ async function loadWebhooks() {
             `).join('');
         }
     } catch (error) {
-        showToast('Webhooklar yüklenemedi', 'error');
+        showToast('Failed to load webhooks', 'error');
     }
 }
 
@@ -1009,7 +1009,7 @@ async function createWebhook() {
             body: JSON.stringify(data),
         });
 
-        showToast('Webhook oluşturuldu!', 'success');
+        showToast('Webhook created!', 'success');
         closeModal(elements.webhookModal);
         elements.webhookForm.reset();
         loadWebhooks();
@@ -1023,37 +1023,37 @@ async function testWebhook(id) {
         const result = await apiRequest(`/webhooks/${id}/test`, { method: 'POST' });
 
         if (result.success) {
-            showToast(`Webhook testi başarılı (${result.status_code})`, 'success');
+            showToast(`Webhook test successful (${result.status_code})`, 'success');
         } else {
-            showToast(`Webhook testi başarısız: ${result.error || result.status_code}`, 'error');
+            showToast(`Webhook test failed: ${result.error || result.status_code}`, 'error');
         }
     } catch (error) {
-        showToast('Test başarısız', 'error');
+        showToast('Test failed', 'error');
     }
 }
 
 async function deleteWebhook(id) {
-    if (!confirm('Bu webhook\'u silmek istediğinizden emin misiniz?')) return;
+    if (!confirm('Are you sure you want to delete this webhook?')) return;
 
     try {
         await apiRequest(`/webhooks/${id}`, { method: 'DELETE' });
-        showToast('Webhook silindi', 'success');
+        showToast('Webhook deleted', 'success');
         loadWebhooks();
     } catch (error) {
-        showToast('Webhook silinemedi', 'error');
+        showToast('Failed to delete webhook', 'error');
     }
 }
 
 // ===== API Key =====
 async function generateNewApiKey() {
-    if (!confirm('Yeni API anahtarı oluşturulacak. Eski anahtar geçersiz olacak. Devam etmek istiyor musunuz?')) return;
+    if (!confirm('A new API key will be created. The old one will be invalid. Continue?')) return;
 
     try {
         const result = await apiRequest('/auth/api-key', { method: 'POST' });
         document.querySelector('#apiKeyDisplay code').textContent = result.api_key;
-        showToast('Yeni API anahtarı oluşturuldu!', 'success');
+        showToast('New API key created!', 'success');
     } catch (error) {
-        showToast('API anahtarı oluşturulamadı', 'error');
+        showToast('Failed to create API key', 'error');
     }
 }
 

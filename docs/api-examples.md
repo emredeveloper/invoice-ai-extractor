@@ -1,8 +1,8 @@
-# API Ornekleri ve Hata Semalari
+# API Examples and Error Schemas
 
-Bu dokuman, entegrasyon icin tipik istek/yanit orneklerini ve standart hata semasini icerir.
+This document provides typical request/response examples and standard error schema.
 
-## Tekli Fatura Yukleme
+## Single Invoice Upload
 
 ### Request
 
@@ -19,7 +19,7 @@ curl -X POST http://localhost:8000/upload   -H "Authorization: Bearer <TOKEN>"  
 }
 ```
 
-## Task Durumu
+## Task Status
 
 ```bash
 curl http://localhost:8000/status/task_123
@@ -36,7 +36,7 @@ curl http://localhost:8000/status/task_123
 }
 ```
 
-## Batch Yukleme
+## Batch Upload
 
 ```bash
 curl -X POST http://localhost:8000/batch/upload   -H "Authorization: Bearer <TOKEN>"   -F "files=@inv1.pdf"   -F "files=@inv2.pdf"
@@ -50,7 +50,7 @@ curl -X POST http://localhost:8000/batch/upload   -H "Authorization: Bearer <TOK
 }
 ```
 
-## Standart Hata Semasi
+## Standard Error Schema
 
 ```json
 {
@@ -64,7 +64,7 @@ curl -X POST http://localhost:8000/batch/upload   -H "Authorization: Bearer <TOK
 }
 ```
 
-## Ornek HTTP Kodlari
+## Common HTTP Codes
 
 - `400` - validation_error
 - `401` - unauthorized

@@ -1,33 +1,33 @@
-# Prompt Yonetimi ve Versiyonlama
+# Prompt Management and Versioning
 
-Bu dokuman, prompt versiyonlama ve A/B test yaklasimini tanimlar.
+This document defines prompt versioning and A/B testing strategy.
 
-## Versiyonlama Politikasi
+## Versioning Policy
 
-- Her prompt icin benzersiz bir `prompt_id` kullanilir.
-- Semver tabanli surumleme onerilir: `major.minor.patch`.
-  - **major**: cikti formatinda veya is kuralinda kirici degisiklik
-  - **minor**: yeni alan/iyilestirme
-  - **patch**: duzeltme veya optimizasyon
+- Use a unique `prompt_id` for each prompt.
+- Use semver: `major.minor.patch`.
+  - **major**: breaking changes in format or rules
+  - **minor**: new fields or improvements
+  - **patch**: fixes or optimizations
 
-## Degisiklik Notlari
+## Change Notes
 
-- Prompt degisiklikleri icin kisa bir changelog tutulur.
-- Hangi endpoint/akislari etkiledigi belirtilir.
+- Maintain a short changelog per prompt.
+- Document which endpoints/flows are affected.
 
-## A/B Test Destegi (Oneri)
+## A/B Testing (Suggested)
 
-- Trafik orani: `A=90%`, `B=10%` gibi kontrollu dagitim.
-- KPI: dogruluk, isleme suresi, manuel duzeltme orani.
-- Deneme suresi: asgari ornek sayisi belirlenir.
+- Traffic split: e.g., `A=90%`, `B=10%`.
+- KPIs: accuracy, processing time, manual correction rate.
+- Duration: minimum sample size before decision.
 
-## Yayinlama Akisi (Oneri)
+## Release Flow (Suggested)
 
-1) Staging ortaminda deneme
-2) Kucuk ornekle A/B
-3) Basari metri?i esigine ulasinca genisletme
+1) Test in staging
+2) Run a small A/B test
+3) Roll out when KPI thresholds are met
 
-## Kayit ve Izlenebilirlik
+## Tracking and Observability
 
-- Prompt version bilgisi audit log veya isleme kaydina eklenir.
-- Ustune raporlanabilir KPI alanlari eklenir.
+- Store prompt version in audit logs or processing records.
+- Add KPI fields for reporting.

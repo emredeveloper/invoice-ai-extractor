@@ -1,62 +1,84 @@
-import httpx
 import asyncio
 import os
-import uuid
 import sys
+import uuid
+
+import httpx
 from motor.motor_asyncio import AsyncIOMotorClient
 
-# Konfigürasyon
 BASE_URL = "http://localhost:8000"
-MONGO_URL = "mongodb://localhost:27017" # Windows Host MongoDB
+MONGO_URL = "mongodb://localhost:27017"
+
 TEST_USER = {
     "email": f"pro_test_{uuid.uuid4().hex[:6]}@example.com",
     "password": "ProPassword123!",
-    "username": f"tester_{uuid.uuid4().hex[:6]}"
+    "username": f"tester_{uuid.uuid4().hex[:6]}",
 }
 
-class Colors:
-    HEADER, BLUE, GREEN, YELLOW, RED, ENDC, BOLD = '\033[95m', '\033[94m', '\033[92m', '\033[93m', '\033[91m', '\033[0m', '\033[1m'
 
-def print_step(msg): print(f"\n{Colors.BLUE}{Colors.BOLD}>>> {msg}{Colors.ENDC}")
-def print_success(msg): print(f"{Colors.GREEN}✓ {msg}{Colors.ENDC}")
-def print_error(msg, detail=""): print(f"{Colors.RED}✗ {msg}{Colors.ENDC} {detail}")
+class Colors:
+    HEADER, BLUE, GREEN, YELLOW, RED, ENDC, BOLD = (
+        "\033[95m",
+        "\033[94m",
+        "\033[92m",
+        "\033[93m",
+        "\033[91m",
+        "\033[0m",
+        "\033[1m",
+    )
+
+
+def print_step(msg):
+    print(f"\n{Colors.BLUE}{Colors.BOLD}>>> {msg}{Colors.ENDC}")
+
+
+def print_success(msg):
+    print(f"{Colors.GREEN}✓ {msg}{Colors.ENDC}")
+
+
+def print_error(msg, detail=""):
+    print(f"{Colors.RED}✗ {msg}{Colors.ENDC} {detail}")
+
 
 async def run_extended_test():
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        print(f"{Colors.HEADER}{Colors.BOLD}=== INVOICE AI: GENİŞLETİLMİŞ SİSTEM TESTİ ==={Colors.ENDC}")
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        print(f"{Colors.HEADER}{Colors.BOLD}=== INVOICE AI: EXTENDED SYSTEM TEST ==={Colors.ENDC}")
 
-        # 1. Kayıt ve Giriş
-        print_step("Auth İşlemleri...")
+        # 1) Register and sign in
+        print_step("Authentication")
         reg_resp = await client.post(f"{BASE_URL}/auth/register", json=TEST_USER)
-        if reg_resp.status_code not in [200, 201]:
-            print_error("Kayıt başarısız", reg_resp.text)
+        if reg_resp.status_code not in (200, 201):
+            print_error("Registration failed", reg_resp.text)
             return
-            
-        login_resp = await client.post(f"{BASE_URL}/auth/login", json={"email": TEST_USER["email"], "password": TEST_USER["password"]})
+
+        login_resp = await client.post(
+            f"{BASE_URL}/auth/login",
+            json={"email": TEST_USER["email"], "password": TEST_USER["password"]},
+        )
         if login_resp.status_code != 200:
-            print_error("Giriş başarısız", login_resp.text)
+            print_error("Login failed", login_resp.text)
             return
-            
+
         token = login_resp.json()["access_token"]
         headers = {"Authorization": f"Bearer {token}"}
-        print_success("Kullanıcı oluşturuldu ve giriş yapıldı.")
+        print_success("User created and signed in.")
 
-        # 2. API Key Üretimi ve Testi
-        print_step("API Key Mekanizması Test Ediliyor...")
+        # 2) API key
+        print_step("API key")
         key_resp = await client.post(f"{BASE_URL}/auth/api-key", headers=headers)
         if key_resp.status_code == 200:
             api_key = key_resp.json()["api_key"]
-            print_success(f"API Key oluşturuldu: {api_key[:10]}...")
+            print_success(f"API key created: {api_key[:10]}...")
         else:
-            print_error("API Key oluşturulamadı")
+            print_error("Failed to create API key", key_resp.text)
 
-        # 3. Toplu Fatura Yükleme (Batch Upload)
-        print_step("Toplu İşlem (Batch Upload) Test Ediliyor...")
-        sample_dir = r"c:\Users\emreq\Desktop\Task-AI\samples"
-        files_to_upload = [f for f in os.listdir(sample_dir) if f.endswith('.pdf')][:3]
-        
+        # 3) Batch upload
+        print_step("Batch upload")
+        sample_dir = os.path.join(os.getcwd(), "samples")
+        files_to_upload = [f for f in os.listdir(sample_dir) if f.lower().endswith(".pdf")][:3]
+
         if not files_to_upload:
-            print_error("Samples klasöründe PDF bulunamadı!")
+            print_error("No PDF files found in samples directory!")
             return
 
         multipart_files = []
@@ -67,84 +89,97 @@ async def run_extended_test():
                 f_obj = open(f_path, "rb")
                 opened_files.append(f_obj)
                 multipart_files.append(("files", (f_name, f_obj, "application/pdf")))
-            
+
             batch_resp = await client.post(f"{BASE_URL}/batch/upload", headers=headers, files=multipart_files)
             if batch_resp.status_code != 200:
-                print_error("Batch upload başarısız", batch_resp.text)
+                print_error("Batch upload failed", batch_resp.text)
                 return
-                
-            batch_id = batch_resp.json()["id"]
-            print_success(f"Toplu işlem başlatıldı. Batch ID: {batch_id} | {len(files_to_upload)} dosya")
-        finally:
-            for f in opened_files: f.close()
 
-        # 4. Batch ve DB Senkronizasyon Takibi
-        print_step("Batch Durumu ve AI Analizi Bekleniyor (Polling)...")
-        for i in range(30):
+            batch_id = batch_resp.json()["id"]
+            print_success(f"Batch started. Batch ID: {batch_id} | {len(files_to_upload)} files")
+        finally:
+            for f in opened_files:
+                f.close()
+
+        # 4) Poll batch status
+        print_step("Waiting for batch completion (polling)")
+        # Local mode runs tasks in-process; timing can vary. Give it a bit more time
+        # and fail explicitly if the batch does not complete.
+        for i in range(60):
             b_status_resp = await client.get(f"{BASE_URL}/batch/{batch_id}", headers=headers)
+            if b_status_resp.status_code != 200:
+                print_error("Failed to read batch status", b_status_resp.text)
+                return
             b_data = b_status_resp.json()
-            sys.stdout.write(f"\rİşlenen: {b_data['processed_files']}/{b_data['total_files']} | Durum: {b_data['status']} [{i+1}/30]")
+            sys.stdout.write(
+                f"\rProcessed: {b_data['processed_files']}/{b_data['total_files']} | Status: {b_data['status']} [{i+1}/60]"
+            )
             sys.stdout.flush()
-            if b_data['status'] == "completed": break
+            if b_data["status"] == "completed":
+                break
             await asyncio.sleep(4)
         print("\n")
+        if b_data.get("status") != "completed" or b_data.get("processed_files") != b_data.get("total_files"):
+            print_error("Batch did not complete in time", str(b_data))
+            return
 
-        # 5. Veritabanı Derin Kontrol (Motor)
-        print_step("Veritabanı (MongoDB) Veri Bütünlüğü Kontrolü...")
+        # 5) DB validation and update
+        print_step("MongoDB data validation")
         try:
             db_client = AsyncIOMotorClient(MONGO_URL)
             invoices_col = db_client["invoice_db"]["invoices"]
-            
-            # Son işlenen faturayı alalım
+
             last_invoice = await invoices_col.find_one({"status": "completed"}, sort=[("created_at", -1)])
-            if last_invoice:
-                print_success(f"DB Doğrulaması: '{last_invoice['supplier_name']}' faturası DB'de.")
-                invoice_id = last_invoice["_id"]
-            else:
-                print_error("DB'de işlenmiş fatura bulunamadı!")
+            if not last_invoice:
+                print_error("No completed invoice found in DB!")
                 return
-                
-            # 6. Veri Güncelleme (Update)
-            print_step("Fatura Verisi Güncelleme (Update) Testi...")
-            update_payload = {"total_amount": 9999.99, "supplier_name": "TEST GUNCEL LTD"}
+
+            invoice_id = last_invoice["_id"]
+            print_success(f"DB validation: invoice for '{last_invoice.get('supplier_name')}' exists.")
+
+            print_step("Invoice update")
+            update_payload = {"total_amount": 9999.99, "supplier_name": "TEST UPDATE LTD"}
             upd_resp = await client.put(f"{BASE_URL}/invoices/{invoice_id}", headers=headers, json=update_payload)
             if upd_resp.status_code == 200:
-                print_success("Fatura verisi başarıyla güncellendi.")
+                print_success("Invoice updated successfully.")
             else:
-                print_error("Güncelleme başarısız", upd_resp.text)
-                
+                print_error("Update failed", upd_resp.text)
+
             db_client.close()
         except Exception as e:
-            print_error("MongoDB bağlantı hatası", str(e))
+            print_error("MongoDB connection error", str(e))
 
-        # 7. Webhook Yönetimi (CRUD)
-        print_step("Webhook Altyapısı Test Ediliyor...")
-        wh_data = {"url": "https://webhook.site/test", "is_active": True, "on_success": True}
+        # 6) Webhooks CRUD
+        print_step("Webhooks CRUD")
+        wh_data = {"url": "https://example.com/webhook", "is_active": True, "on_success": True}
         wh_resp = await client.post(f"{BASE_URL}/webhooks", headers=headers, json=wh_data)
-        if wh_resp.status_code in [200, 201]:
+        if wh_resp.status_code in (200, 201):
             wh_id = wh_resp.json()["id"]
-            print_success(f"Webhook oluşturuldu: {wh_id}")
+            print_success(f"Webhook created: {wh_id}")
             del_resp = await client.delete(f"{BASE_URL}/webhooks/{wh_id}", headers=headers)
-            if del_resp.status_code in [200, 204]:
-                print_success("Webhook silme başarılı.")
+            if del_resp.status_code in (200, 204):
+                print_success("Webhook deleted successfully.")
+            else:
+                print_error("Failed to delete webhook", del_resp.text)
         else:
-            print_error("Webhook oluşturulamadı", wh_resp.text)
+            print_error("Failed to create webhook", wh_resp.text)
 
-        # 8. Export Testi (CSV)
-        print_step("Dışa Aktarma (Export) Test Ediliyor...")
+        # 7) Export (CSV)
+        print_step("Export (CSV)")
         export_resp = await client.post(f"{BASE_URL}/invoices/export", headers=headers, json={"format": "csv"})
         if export_resp.status_code == 200:
-            print_success(f"CSV Export başarılı. Veri boyutu: {len(export_resp.content)} byte")
+            print_success(f"CSV export successful. Size: {len(export_resp.content)} bytes")
         else:
-            print_error("Export başarısız", export_resp.text)
+            print_error("Export failed", export_resp.text)
 
-        # 9. Final Dashboard
-        print_step("Dashboard İstatistikleri Final Kontrolü...")
+        # 8) Final dashboard stats
+        print_step("Dashboard stats")
         stats_resp = await client.get(f"{BASE_URL}/invoices/stats", headers=headers)
         if stats_resp.status_code == 200:
-            print_success(f"Final İstatistik: {stats_resp.json()['total_invoices']} fatura sistemde.")
+            print_success(f"Final stats: {stats_resp.json()['total_invoices']} invoices in the system.")
 
-        print(f"\n{Colors.GREEN}{Colors.BOLD}=== [TEBRİKLER] PROJE TÜM MODÜLLERİYLE %100 ÇALIŞIYOR! ==={Colors.ENDC}\n")
+        print(f"\n{Colors.GREEN}{Colors.BOLD}=== ALL MODULES PASSED ==={Colors.ENDC}\n")
+
 
 if __name__ == "__main__":
     try:
@@ -152,4 +187,4 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         pass
     except Exception as e:
-        print(f"\n{Colors.RED}Kritik Hata: {e}{Colors.ENDC}")
+        print(f"\n{Colors.RED}Critical error: {e}{Colors.ENDC}")

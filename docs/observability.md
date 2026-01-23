@@ -1,10 +1,10 @@
-# Gozlemlenebilirlik (Observability)
+# Observability
 
-Bu dokuman, Celery kuyrugu ve worker metriklerini Prometheus uzerinden izlemek icin onerilen yaklasimi listeler.
+This document lists recommended Celery queue/worker metrics and Prometheus integration.
 
-## Hedeflenen Metrikler
+## Target Metrics
 
-### Kuyruk ve Worker
+### Queue and Worker
 - `celery_workers_up` (gauge)
 - `celery_queue_length` (gauge)
 - `celery_task_latency_seconds` (histogram)
@@ -15,12 +15,12 @@ Bu dokuman, Celery kuyrugu ve worker metriklerini Prometheus uzerinden izlemek i
 - `invoice_api_requests_total`
 - `invoice_processing_time_seconds`
 
-## Prometheus Entegrasyonu (Oneri)
+## Prometheus Integration (Suggested)
 
-- Celery icin bir exporter veya app icinde metrik kaydi kullanilir.
-- `prometheus.yml` icinde ilgili scrape target eklenir.
+- Use a Celery exporter or app-level metric registration.
+- Add a scrape target to `prometheus.yml`.
 
-### Ornek Scrape Hedefi
+### Example Scrape Target
 
 ```yaml
 scrape_configs:
@@ -29,8 +29,8 @@ scrape_configs:
       - targets: ["worker:8002"]
 ```
 
-## Dashboard Onerileri
+## Dashboard Ideas
 
-- Task throughput / hata oranlari
-- Kuyruk uzunlugu ve bekleme suresi
-- Worker kapasitesi ve retry trendi
+- Throughput and error rates
+- Queue length and wait time
+- Worker capacity and retry trend

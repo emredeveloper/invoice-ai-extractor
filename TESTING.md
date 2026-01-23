@@ -1,68 +1,68 @@
-# Test Stratejisi ve Kapsam
+# Testing Strategy and Coverage
 
-Bu dokuman, mevcut testlerin kapsamini ve calistirma adimlarini ozetler. Hedef, kritik akislari hizli dogrulamak ve regresyon riskini azaltmaktir.
+This document summarizes test coverage and how to run the existing tests.
 
-## Kapsam
+## Coverage
 
 ### Unit
-- Validator ve isleme mantigi icin birim testleri (pytest altyapisi).
-- Hata senaryolari ve alan dogrulama kurallari odaklidir.
+- Unit tests for validators and processing logic (pytest).
+- Focus on error scenarios and field validation.
 
-### API ve Entegrasyon
-- Temel API akislari ve yukleme senaryolari (otomasyon testi).
-- Webhook tetikleme ve geri donus dogrulamasi.
+### API and Integration
+- Core API flows and upload scenarios (automation tests).
+- Webhook triggers and callback validation.
 
-### Sistem ve Ajan Testleri
-- Sistem testi: tam akisin uctan uca kontrolu.
-- Agent testi: LLM tabanli akislarda minimum davranis dogrulamasi.
+### System and Agent Tests
+- System test: full end-to-end flow.
+- Agent test: minimum behavior validation for LLM-driven flows.
 
-### LLM Baglanti Dogrulamasi
-- LM Studio baglantisi ve model yaniti icin baglanti testi.
+### LLM Connectivity
+- LM Studio connectivity test and sample response.
 
-## Test Dosyalari
+## Test Files
 
-- `tests/auto_test.py` - API yukleme akislari (smoke/acceptance)
-- `tests/webhook_test.py` - Webhook akislari
-- `tests/system_test.py` - Uctan uca sistem testi
-- `tests/agent_test.py` - Agent/LLM davranis testi
-- `tests/lmstudio-test.py` - LM Studio baglanti testi
+- `tests/auto_test.py` - API upload flows (smoke/acceptance)
+- `tests/webhook_test.py` - Webhook flows
+- `tests/system_test.py` - End-to-end system test
+- `tests/agent_test.py` - Agent/LLM behavior test
+- `tests/lmstudio-test.py` - LM Studio connectivity test
 
-## Calistirma
+## Running
 
 ```bash
-# Pytest tabanli unit testleri
+# Unit tests
 pytest tests/
 
-# API smoke testleri
+# API smoke tests
 python tests/auto_test.py
 
-# Webhook akislari
+# Webhook flows
 python tests/webhook_test.py
 
-# Sistem testi
+# System test
 python tests/system_test.py
 
-# Agent/LLM testi
+# Agent/LLM test
 python tests/agent_test.py
 
-# LM Studio baglanti testi
+# LM Studio connectivity
 python tests/lmstudio-test.py
 ```
 
-## Ortam Onkosullari
+## Environment Prerequisites
 
-- `docker-compose up --build` ile servislerin ayakta olmasi onerilir.
-- LLM testleri icin `LLM_PROVIDER` ve ilgili anahtarlar/URL'ler ayarlanmalidir.
-- Ornek PDF'ler `samples/` altinda bulunur.
+- Services should be running via `docker-compose up --build`.
+- LLM tests require `LLM_PROVIDER` and related keys/URLs.
+- Sample PDFs are in `samples/`.
 
-## Beklenen Ciktilar
+## Expected Results
 
-- API testleri icin HTTP 200/201 yanitlari ve task durumlarinin tamamlanmasi.
-- Webhook testinde hedef endpoint'e basarili istek.
-- LLM testlerinde ornek bir yanit alinmasi.
+- API tests return HTTP 200/201 and tasks complete.
+- Webhook tests hit the target endpoint successfully.
+- LLM tests return a sample response.
 
-## Kapsam Bosluklari (Backlog)
+## Coverage Gaps (Backlog)
 
-- Load/stress test senaryolari (k6/Locust).
-- Prometheus metrikleri icin otomatik dogrulama testleri.
-- Batch islemler icin daha genis veri setiyle regresyon paketi.
+- Load/stress test scenarios (k6/Locust).
+- Automated verification for Prometheus metrics.
+- Larger batch regression with extended datasets.

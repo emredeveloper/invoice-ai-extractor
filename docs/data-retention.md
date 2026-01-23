@@ -1,35 +1,33 @@
-# KVKK/GDPR Veri Saklama Politikasi
+# GDPR/KVKK Data Retention Policy
 
-Bu dokuman, veri saklama ve otomatik silme davranisini nasil konfigurasyon ile yonetilecegini anlatir.
+This document explains how data retention and automatic deletion can be configured.
 
-## Temel Ilkeler
+## Core Principles
 
-- Isleme tamamlaninca yuklenen dosyalar otomatik silinir.
-- Fatura metaverisi ve audit loglari, saklama politikasina gore tutulur.
-- Multeci (tenant) ortamlarda saklama suresi tenant bazli ayarlanabilir.
+- Uploaded files are automatically deleted after processing.
+- Invoice metadata and audit logs follow the retention policy.
+- Multi-tenant setups should support per-tenant retention overrides.
 
-## Konfigurasyon (Oneri)
-
-A?a??daki degiskenler, veri saklama davranisini ayarlamak icin kullanilabilir:
+## Configuration (Suggested)
 
 ```env
-# Veri saklama suresi (gun)
+# Retention duration (days)
 RETENTION_DAYS=30
 
-# Y?klenen dosyalari otomatik sil
+# Auto-delete uploaded files
 AUTO_DELETE_UPLOADS=true
 
-# Periyodik temizlik zamani (cron ifadesi)
+# Purge schedule (cron)
 PURGE_SCHEDULE=0 3 * * *
 ```
 
-## Davranis Detaylari
+## Behavior
 
-- `RETENTION_DAYS`: Fatura ve ilgili log verilerinin saklanma suresi.
-- `AUTO_DELETE_UPLOADS`: Isleme sonrasi dosyalarin silinmesini kontrol eder.
-- `PURGE_SCHEDULE`: Temizlik jobunun calisma zamanini belirler.
+- `RETENTION_DAYS`: How long invoice and log data are retained.
+- `AUTO_DELETE_UPLOADS`: Controls post-processing file deletion.
+- `PURGE_SCHEDULE`: When the cleanup job runs.
 
-## Uyumluluk Notlari
+## Compliance Notes
 
-- Gerektiginde veri minimizasyonu icin alan bazli redaksiyon uygulanabilir.
-- Silme islemleri audit loglariyla kayit altina alinmalidir.
+- Field-level redaction can be applied when needed.
+- Deletion events should be recorded in audit logs.

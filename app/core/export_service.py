@@ -33,18 +33,18 @@ class ExportService:
 
             row = {
                 "ID": ExportService._get_val(inv, "id"),
-                "Fatura No": ExportService._get_val(inv, "invoice_number") or "",
-                "Tarih": ExportService._get_val(inv, "invoice_date") or "",
-                "Tedarikçi": ExportService._get_val(inv, "supplier_name") or "",
-                "Tutar": ExportService._get_val(inv, "total_amount") or 0,
-                "Para Birimi": ExportService._get_val(inv, "currency") or "TL",
-                "Vergi Tutarı": ExportService._get_val(inv, "tax_amount") or 0,
-                "Vergi Oranı (%)": ExportService._get_val(inv, "tax_rate") or 0,
-                "Durum": ExportService._get_val(inv, "status"),
-                "İşlem Süresi (ms)": ExportService._get_val(inv, "processing_time_ms") or 0,
-                "Oluşturma Tarihi": created_at.strftime("%Y-%m-%d %H:%M:%S") if isinstance(created_at, datetime) else str(created_at or ""),
-                "Dosya Adı": ExportService._get_val(inv, "original_filename") or "",
-                "Dosya Tipi": ExportService._get_val(inv, "file_type") or "",
+                "Invoice No": ExportService._get_val(inv, "invoice_number") or "",
+                "Date": ExportService._get_val(inv, "invoice_date") or "",
+                "Supplier": ExportService._get_val(inv, "supplier_name") or "",
+                "Amount": ExportService._get_val(inv, "total_amount") or 0,
+                "Currency": ExportService._get_val(inv, "currency") or "TRY",
+                "Tax Amount": ExportService._get_val(inv, "tax_amount") or 0,
+                "Tax Rate (%)": ExportService._get_val(inv, "tax_rate") or 0,
+                "Status": ExportService._get_val(inv, "status"),
+                "Processing Time (ms)": ExportService._get_val(inv, "processing_time_ms") or 0,
+                "Created At": created_at.strftime("%Y-%m-%d %H:%M:%S") if isinstance(created_at, datetime) else str(created_at or ""),
+                "File Name": ExportService._get_val(inv, "original_filename") or "",
+                "File Type": ExportService._get_val(inv, "file_type") or "",
             }
             result.append(row)
         return result
@@ -69,9 +69,9 @@ class ExportService:
         """Export invoices to Excel format with styling."""
         wb = Workbook()
         
-        # ===== Faturalar Sayfası =====
+        # ===== Invoices Sheet =====
         ws = wb.active
-        ws.title = "Faturalar"
+        ws.title = "Invoices"
         
         data = ExportService.invoices_to_dict_list(invoices)
         
@@ -103,7 +103,7 @@ class ExportService:
                     cell.border = thin_border
                     
                     # Format numbers
-                    if isinstance(value, (int, float)) and key in ["Tutar", "Vergi Tutarı"]:
+                    if isinstance(value, (int, float)) and key in ["Amount", "Tax Amount"]:
                         cell.number_format = '#,##0.00'
             
             # Auto-adjust column widths
@@ -114,13 +114,13 @@ class ExportService:
                 )
                 ws.column_dimensions[get_column_letter(col)].width = min(max_length + 2, 50)
         
-        # ===== Kalemler Sayfası =====
+        # ===== Line Items Sheet =====
         if include_items:
-            ws_items = wb.create_sheet("Kalemler")
+            ws_items = wb.create_sheet("Items")
             
             item_headers = [
-                "Fatura ID", "Fatura No", "Ürün Adı", "Açıklama", 
-                "Miktar", "Birim Fiyat", "Toplam Fiyat", "Doğrulama"
+                "Invoice ID", "Invoice No", "Product Name", "Description",
+                "Quantity", "Unit Price", "Total Price", "Validation"
             ]
             
             # Write headers
@@ -159,18 +159,18 @@ class ExportService:
             for col in range(1, len(item_headers) + 1):
                 ws_items.column_dimensions[get_column_letter(col)].width = 15
         
-        # ===== Özet Sayfası =====
-        ws_summary = wb.create_sheet("Özet")
+        # ===== Summary Sheet =====
+        ws_summary = wb.create_sheet("Summary")
         
         summary_data = [
-            ("Toplam Fatura Sayısı", len(invoices)),
-            ("Başarılı İşlemler", sum(1 for i in invoices if ExportService._get_val(i, "status") == "completed")),
-            ("Başarısız İşlemler", sum(1 for i in invoices if ExportService._get_val(i, "status") == "failed")),
-            ("Toplam Tutar", sum(ExportService._get_val(i, "total_amount") or 0 for i in invoices)),
-            ("Toplam Vergi", sum(ExportService._get_val(i, "tax_amount") or 0 for i in invoices)),
-            ("Ortalama İşlem Süresi (ms)", 
+            ("Total Invoice Count", len(invoices)),
+            ("Successful Jobs", sum(1 for i in invoices if ExportService._get_val(i, "status") == "completed")),
+            ("Failed Jobs", sum(1 for i in invoices if ExportService._get_val(i, "status") == "failed")),
+            ("Total Amount", sum(ExportService._get_val(i, "total_amount") or 0 for i in invoices)),
+            ("Total Tax", sum(ExportService._get_val(i, "tax_amount") or 0 for i in invoices)),
+            ("Average Processing Time (ms)",
              sum(ExportService._get_val(i, "processing_time_ms") or 0 for i in invoices) / len(invoices) if invoices else 0),
-            ("Rapor Tarihi", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+            ("Report Date", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
         ]
         
         for row_idx, (label, value) in enumerate(summary_data, 1):

@@ -37,7 +37,7 @@ class InvoiceResponse(BaseModel):
     currency: Optional[str] = None
     tax_amount: Optional[float] = None
     tax_rate: Optional[float] = None
-    category: Optional[str] = "Genel"
+    category: Optional[str] = "General"
     
     # Validations
     arithmetic_validation: Optional[List[Dict[str, Any]]] = None

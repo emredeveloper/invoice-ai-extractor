@@ -1,30 +1,30 @@
-# Model Secim Stratejisi
+# Model Selection Strategy
 
-Bu dokuman, yerel LM Studio ve bulut Gemini arasinda karar vermek icin pratik bir karsilastirma sunar.
+This document provides a practical comparison between local LM Studio and cloud Gemini.
 
-## Karsilastirma (Nitel)
+## Comparison (Qualitative)
 
-| Kriter | LM Studio (Yerel) | Gemini (Bulut) |
+| Criteria | LM Studio (Local) | Gemini (Cloud) |
 |---|---|---|
-| Gecikme (Latency) | Orta (donanim bagimli) | Dusuk-Orta (ag bagimli) |
-| Dogruluk (Accuracy) | Orta-Yuksek (modele bagli) | Yuksek (model tier'ina bagli) |
-| Maliyet | Donanim maliyeti | Kullanim bazli |
-| Veri Gizliligi | Yuksek (on-prem) | Orta (bulut) |
-| Operasyonel Yuk | Yuksek (model bakimi) | Dusuk (servis yonetimli) |
+| Latency | Medium (hardware-dependent) | Low-Medium (network-dependent) |
+| Accuracy | Medium-High (model-dependent) | High (tier-dependent) |
+| Cost | Hardware cost | Usage-based |
+| Data Privacy | High (on-prem) | Medium (cloud) |
+| Operational Overhead | High (model maintenance) | Low (managed) |
 
-## Onerilen Senaryolar
+## Recommended Scenarios
 
-- **Hassas veri / on-prem zorunlulugu**: LM Studio
-- **Hizli prototip ve yuksek kalite**: Gemini
-- **Maliyet optimizasyonu**: S?k yukler icin yerel, pik trafikte bulut
+- **Sensitive data / on-prem requirement**: LM Studio
+- **Fast prototyping and higher quality**: Gemini
+- **Cost optimization**: Local for steady workloads, cloud for spikes
 
-## Secim Matrisi (Oneri)
+## Decision Matrix (Suggested)
 
-- Veri gizliligi kritikse -> Yerel
-- Zaman kritik ve kalite odakliysa -> Bulut
-- Hibrit yaklasim gerekiyorsa -> Karsilastirma metrikleriyle kural seti
+- If data privacy is critical -> Local
+- If speed and quality are critical -> Cloud
+- If hybrid is required -> Use rule-based routing
 
-## Operasyonel Notlar
+## Operational Notes
 
-- Yerel model icin GPU/CPU kapasitesi ve concurrency limitleri tanimlanmalidir.
-- Bulut modelinde rate limit ve fatura alarmlari takip edilmelidir.
+- Define concurrency limits for local models.
+- Monitor rate limits and billing for cloud usage.

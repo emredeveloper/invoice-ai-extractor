@@ -10,11 +10,13 @@ DATABASE_NAME = os.getenv("DATABASE_NAME", "invoice_db")
 # MongoDB Client
 client: AsyncIOMotorClient = None
 db = None
+_client_loop = None
 
 
 async def connect_to_mongo():
     """Connect to MongoDB with loop-awareness to avoid 'Event loop is closed' errors."""
     global client, db
+    global _client_loop
     import asyncio
     
     try:
@@ -22,27 +24,9 @@ async def connect_to_mongo():
     except RuntimeError:
         return # Not in an event loop
 
-    # Reconnect if no client OR if client's loop might be stale
-    # Motor clients usually bind to the loop active at creation
-    recreate = (client is None)
-    
-    if not recreate:
-        try:
-            # Lightweight check: if we can't get the server info, maybe something is wrong
-            # but wait, Motor handles re-connection. The 'closed loop' error is 
-            # specific to it trying to use a signal/executor from a dead loop.
-            pass
-        except Exception:
-            recreate = True
-
-    # Check for Celery worker environment: always recreate if we're using asyncio.run
-    # because asyncio.run always uses a fresh loop.
-    # We can detect this by checking if the client was created in a loop that is now closed.
-    # A simple but effective way for this project:
-    if client is not None:
-        # Re-check the existing client against current loop
-        # We'll just recreate for safety in this specific worker context
-        recreate = True
+    # Motor clients bind to the event loop active at creation. Recreate only when
+    # the running loop changes (e.g., Celery using asyncio.run creates a fresh loop).
+    recreate = (client is None) or (_client_loop is not current_loop)
 
     if recreate:
         if client:
@@ -52,6 +36,7 @@ async def connect_to_mongo():
                 pass
         client = AsyncIOMotorClient(MONGODB_URL)
         db = client[DATABASE_NAME]
+        _client_loop = current_loop
     
     # Create indexes only once if they don't exist
     # Use a global flag to skip index creation after the very first successful run

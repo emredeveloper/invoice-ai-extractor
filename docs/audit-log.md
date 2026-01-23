@@ -1,11 +1,11 @@
-# Audit Log Stratejisi
+# Audit Log Strategy
 
-Bu dokuman, audit log formatini, saklama politikasini ve arama/filtreleme yaklasimini tanimlar.
+This document defines the audit log format, retention policy, and search/filtering approach.
 
 ## Format
 
-- Loglar JSONL (her satir bir JSON kaydi) formatinda tutulur.
-- Zorunlu alanlar:
+- Logs are stored in JSONL (one JSON per line).
+- Required fields:
   - `event_type`
   - `actor_id`
   - `resource_type`
@@ -15,20 +15,20 @@ Bu dokuman, audit log formatini, saklama politikasini ve arama/filtreleme yaklas
   - `ip`
   - `user_agent`
   - `timestamp`
-- Opsiyonel alanlar:
+- Optional fields:
   - `batch_id`
   - `task_id`
   - `request_id`
   - `error_code`
   - `error_message`
 
-### Ornek Kayit
+### Example Record
 
 ```json
 {"event_type":"invoice.process","actor_id":"user_123","resource_type":"invoice","resource_id":"inv_456","status":"success","duration_ms":842,"ip":"203.0.113.10","user_agent":"Mozilla/5.0","timestamp":"2026-01-22T21:40:12Z","task_id":"task_abc","request_id":"req_xyz"}
 ```
 
-## Event Tipleri (Oneri)
+## Event Types (Suggested)
 
 - `auth.login`
 - `auth.refresh`
@@ -39,29 +39,29 @@ Bu dokuman, audit log formatini, saklama politikasini ve arama/filtreleme yaklas
 - `batch.process`
 - `webhook.deliver`
 
-## Saklama Politikasi
+## Retention Policy
 
-- Varsayilan saklama suresi: **30 gun**.
-- Konfigurasyon secenekleri: **7 / 30 / 90 / 365 gun**.
-- Multeci saklama (multi-tenant) icin tenant bazli override desteklenir.
+- Default retention: **30 days**.
+- Config options: **7 / 30 / 90 / 365 days**.
+- Tenant-level overrides are supported in multi-tenant setups.
 
-## Arama ve Filtreleme
+## Search and Filtering
 
-- Zaman araligi (start/end)
+- Time range (start/end)
 - `event_type`
 - `actor_id`
 - `resource_id`
 - `batch_id` / `task_id`
 - `status`
 
-## Eri?im ve Guvenlik
+## Access and Security
 
-- Sadece yetkili roller audit log okuyabilir.
-- Hassas alanlar (PII) maskeleme veya hash ile saklanir.
-- Log kayitlari immutable olacak sekilde depolanir.
+- Only authorized roles can read audit logs.
+- Sensitive fields (PII) should be masked or hashed.
+- Logs should be stored immutably.
 
-## Uygulama Notlari (Oneri)
+## Implementation Notes (Suggested)
 
-- Dosya tabanli JSONL veya DB tablosu secilebilir.
-- Log rotasyonu ve periyodik purging jobu planlanir.
-- `request_id` ile API loglariyla korelasyon saglanir.
+- File-based JSONL or a DB table can be used.
+- Rotation and scheduled purging should be implemented.
+- Use `request_id` for correlation with API logs.

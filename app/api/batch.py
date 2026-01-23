@@ -8,12 +8,14 @@ from datetime import datetime
 from app.database.connection import get_invoices_collection, get_batch_jobs_collection
 from app.database.models import generate_id, invoice_helper, batch_job_helper
 from app.auth.dependencies import get_current_user
-from app.worker.tasks import celery
+import asyncio
+from app.worker.tasks import celery, _process_invoice_async, DISABLE_CELERY
 from app.api.schemas import BatchJobResponse
 
 router = APIRouter(prefix="/batch", tags=["Batch Processing"])
 
 UPLOAD_DIR = "uploads"
+LOCAL_TASK_TIMEOUT_SECONDS = int(os.getenv("LOCAL_TASK_TIMEOUT_SECONDS", "180"))
 
 
 @router.post("/upload", response_model=BatchJobResponse)
@@ -58,6 +60,7 @@ async def batch_upload(
     }
     
     invoice_ids = []
+    local_results = {"completed": 0, "failed": 0}
     
     for file in files:
         # Validate file type
@@ -80,6 +83,7 @@ async def batch_upload(
             "original_filename": file.filename,
             "file_type": ext,
             "file_size": os.path.getsize(file_path),
+            "file_path": file_path,
             "status": "pending",
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow(),
@@ -88,20 +92,49 @@ async def batch_upload(
         await invoices_col.insert_one(invoice_doc)
         invoice_ids.append(invoice_id)
         
-        # Trigger async task
-        task = celery.send_task(
-            "tasks.process_invoice_task",
-            args=[file_path, file.content_type, invoice_id, current_user["id"]]
-        )
-        
-        # Update invoice with task_id
-        await invoices_col.update_one(
-            {"_id": invoice_id},
-            {"$set": {"task_id": task.id}}
-        )
+        if DISABLE_CELERY:
+            # Local mode: process synchronously to avoid background-task flakiness on Windows.
+            task_id = str(uuid.uuid4())
+            await invoices_col.update_one({"_id": invoice_id}, {"$set": {"task_id": task_id}})
+            try:
+                await asyncio.wait_for(
+                    _process_invoice_async(file_path, file.content_type, invoice_id, current_user["id"]),
+                    timeout=LOCAL_TASK_TIMEOUT_SECONDS,
+                )
+                local_results["completed"] += 1
+            except asyncio.TimeoutError:
+                local_results["failed"] += 1
+                await invoices_col.update_one(
+                    {"_id": invoice_id},
+                    {"$set": {"status": "failed", "error_message": "processing_timeout", "updated_at": datetime.utcnow()}},
+                )
+            except Exception as exc:
+                local_results["failed"] += 1
+                await invoices_col.update_one(
+                    {"_id": invoice_id},
+                    {"$set": {"status": "failed", "error_message": str(exc), "updated_at": datetime.utcnow()}},
+                )
+        else:
+            # Trigger async task
+            task = celery.send_task(
+                "tasks.process_invoice_task",
+                args=[file_path, file.content_type, invoice_id, current_user["id"]]
+            )
+
+            # Update invoice with task_id
+            await invoices_col.update_one(
+                {"_id": invoice_id},
+                {"$set": {"task_id": task.id}}
+            )
     
     # Update batch job with invoice IDs
     batch_doc["invoice_ids"] = invoice_ids
+    if DISABLE_CELERY:
+        batch_doc["processed_files"] = local_results["completed"] + local_results["failed"]
+        batch_doc["successful_files"] = local_results["completed"]
+        batch_doc["failed_files"] = local_results["failed"]
+        batch_doc["status"] = "completed"
+        batch_doc["completed_at"] = datetime.utcnow()
     await batch_jobs.insert_one(batch_doc)
     
     return batch_job_helper(batch_doc)
