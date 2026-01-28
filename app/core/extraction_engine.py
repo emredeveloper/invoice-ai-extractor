@@ -32,7 +32,7 @@ class GeminiProvider(LLMProvider):
     async def generate_json(self, content: str, image_paths: Optional[List[str]] = None) -> Dict[str, Any]:
         prompt = f"{SYSTEM_PROMPT}\n\n{USER_PROMPT_TEMPLATE.format(content=content)}"
         
-        parts = [types.Part.from_text(prompt)]
+        parts = [types.Part.from_text(text=prompt)]
         
         # Add multiple images for multi-page support
         if image_paths:
@@ -45,7 +45,7 @@ class GeminiProvider(LLMProvider):
         response = self.client.models.generate_content(
             model=self.model_name,
             contents=[types.Content(role="user", parts=parts)],
-            generation_config=types.GenerationConfig(response_mime_type="application/json")
+            config=types.GenerateContentConfig(response_mime_type="application/json"),
         )
         return response.text
 

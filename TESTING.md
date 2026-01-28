@@ -47,6 +47,9 @@ python tests/agent_test.py
 
 # LM Studio connectivity
 python tests/lmstudio-test.py
+
+# E2E API checks (requires running API)
+pytest tests/test_e2e.py
 ```
 
 ## Environment Prerequisites
