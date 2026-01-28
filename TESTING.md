@@ -49,6 +49,7 @@ python tests/agent_test.py
 python tests/lmstudio-test.py
 
 # E2E API checks (requires running API)
+# Optional env: TEST_MONGODB_URL, TEST_DATABASE_NAME, WEBHOOK_TEST_HOST
 pytest tests/test_e2e.py
 ```
 
