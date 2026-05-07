@@ -1,6 +1,6 @@
 # Invoice AI - Intelligent Invoice Data Extraction System
 
-AI-powered, scalable invoice data extraction platform. Automatically extracts structured data from PDF, image, and text invoices.
+AI-powered, scalable invoice data extraction platform. It extracts structured data from PDF, image, and text invoices and exposes the workflow through a FastAPI backend.
 
 ![Version](https://img.shields.io/badge/version-2.0.0-blue)
 ![Python](https://img.shields.io/badge/python-3.11-green)
@@ -9,101 +9,124 @@ AI-powered, scalable invoice data extraction platform. Automatically extracts st
 ## Features
 
 ### Security and Authentication
-- **JWT Authentication** - Access and refresh tokens
-- **API Key** - API key for external integrations
-- **Rate Limiting** - IP and user-based throttling
-- **CORS** - Configurable cross-origin support
+- JWT authentication with access and refresh tokens
+- API key support for external integrations
+- IP and user-based rate limiting
+- Configurable CORS
 
 ### Data Processing
-- **Multi-page PDF** - Process all pages in multi-page PDFs
-- **Vision AI** - Image-based OCR and extraction
-- **Batch Processing** - Up to 50 invoices per batch
-- **Dynamic Tax** - Supports %1, %8, %18, %20, etc.
+- Multi-page PDF processing
+- Vision AI based OCR and extraction
+- Batch processing for up to 50 invoices
+- Dynamic tax support for rates such as 1%, 8%, 18%, and 20%
 
 ### Integrations
-- **Webhook** - HTTP callback notifications after processing
-- **Export** - CSV and Excel export
-- **Prometheus** - Metrics monitoring
-- **Grafana** - Visual dashboards
+- Webhook callback notifications after processing
+- CSV and Excel export
+- Prometheus metrics
+- Grafana dashboard support
 
 ### LLM Support
-- **Google Gemini** - Cloud-based processing
-- **LM Studio** - Local Qwen-VL vision model
-- **Flexible Architecture** - Easy provider switching
+- Google Gemini for cloud-based processing
+- LM Studio for local vision model workflows
+- Provider-based architecture for easier switching
 
 ## Quick Start
 
 ### Requirements
-- Docker and Docker Compose
-- (Optional) LM Studio - for local model
+
+- Python 3.11+
+- Docker and Docker Compose, optional
+- Redis, required unless local no-queue mode is enabled
+- MongoDB, required for persistent storage
+- Optional: LM Studio for local model processing
 
 ### 1. Clone the Repository
+
 ```bash
-git clone https://github.com/your-repo/invoice-ai.git
-cd invoice-ai
+git clone https://github.com/emredeveloper/invoice-ai-extractor.git
+cd invoice-ai-extractor
 ```
 
 ### 2. Configure Environment Variables
+
 ```bash
-# Local (no Docker)
+# Local development
 cp .env.local.example .env
 
-# Docker
+# Docker deployment
 # cp .env.docker.example .env
 ```
-Note: For local use, set `DISABLE_CELERY=true` and `DISABLE_RATE_LIMIT=true` to run without Redis (task status and rate limits are kept in memory).
+
+For local development without Redis, set:
+
+```env
+DISABLE_CELERY=true
+DISABLE_RATE_LIMIT=true
+```
+
+In this mode, task status and rate limits are kept in memory.
 
 ### 3. Start with Docker
+
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 
 ### 4. Access Services
+
 | Service | URL |
 |--------|-----|
 | API | http://localhost:8000 |
 | API Docs | http://localhost:8000/docs |
-| Frontend | http://localhost:8000 (or frontend folder) |
+| Frontend | http://localhost:8000 |
 | Redis UI | http://localhost:8001 |
 | Prometheus | http://localhost:9090 |
 | Grafana | http://localhost:3001 |
 
+> For demo environments, Grafana may use `admin/admin`. Change default credentials before production use.
+
 ## API Endpoints
 
 ### Authentication
-```
+
+```text
 POST /auth/register     - Register new user
-POST /auth/login        - Login (get JWT token)
+POST /auth/login        - Login and get JWT token
 POST /auth/refresh      - Refresh token
-GET  /auth/me           - User info
+GET  /auth/me           - Current user info
 POST /auth/api-key      - Create API key
 ```
 
 ### Invoice Processing
-```
+
+```text
 POST /upload            - Upload single invoice
 GET  /status/{task_id}  - Check task status
-POST /upload/public     - Public upload (lower limits)
+POST /upload/public     - Public upload with lower limits
 ```
 
 ### Invoice Management
-```
-GET    /invoices          - List invoices (filter, pagination)
+
+```text
+GET    /invoices          - List invoices with filters and pagination
 GET    /invoices/stats    - Dashboard stats
 GET    /invoices/{id}     - Invoice details
 DELETE /invoices/{id}     - Delete invoice
-POST   /invoices/export   - CSV/Excel export
+POST   /invoices/export   - CSV or Excel export
 ```
 
 ### Batch Processing
-```
-POST /batch/upload      - Batch upload (max 50)
+
+```text
+POST /batch/upload      - Batch upload, max 50 files
 GET  /batch/{id}        - Batch status
 GET  /batch             - Batch list
 ```
 
 ### Webhooks
-```
+
+```text
 GET    /webhooks           - List webhooks
 POST   /webhooks           - Create webhook
 GET    /webhooks/{id}      - Webhook details
@@ -113,7 +136,8 @@ POST   /webhooks/{id}/test - Test webhook
 ```
 
 ### Metrics
-```
+
+```text
 GET /metrics            - Prometheus metrics
 GET /health             - Health check
 ```
@@ -123,78 +147,78 @@ Detailed examples and error schemas: [docs/api-examples.md](docs/api-examples.md
 ## Configuration
 
 ### LLM Provider
-```env
-# Gemini (Cloud)
-LLM_PROVIDER=gemini
-GOOGLE_API_KEY=your_api_key
 
-# Local (LM Studio)
+```env
+# Gemini cloud provider
+LLM_PROVIDER=gemini
+GOOGLE_API_KEY=your_key
+
+# Local LM Studio provider
 LLM_PROVIDER=local
 LOCAL_LLM_URL=http://localhost:1234/v1
 LOCAL_LLM_MODEL=qwen/qwen3-vl-4b
 ```
 
 ### Rate Limiting
+
 ```env
 DEFAULT_RATE_LIMIT=60/minute
 UPLOAD_RATE_LIMIT=10/minute
 ```
 
 ### PDF Processing
+
 ```env
-MAX_PDF_PAGES=10        # Max page count
-PDF_DPI_SCALE=1.5       # Image quality
+MAX_PDF_PAGES=10
+PDF_DPI_SCALE=1.5
 ```
 
 ## Project Structure
 
-```
-??? app/
-?   ??? api/
-?   ?   ??? main.py          # FastAPI main app
-?   ?   ??? invoices.py      # Invoice CRUD
-?   ?   ??? webhooks.py      # Webhook management
-?   ?   ??? batch.py         # Batch processing
-?   ?   ??? schemas.py       # Pydantic models
-?   ??? auth/
-?   ?   ??? router.py        # Auth endpoints
-?   ?   ??? jwt_handler.py   # JWT logic
-?   ?   ??? dependencies.py  # FastAPI dependencies
-?   ?   ??? schemas.py       # Auth schemas
-?   ??? core/
-?   ?   ??? extraction_engine.py  # LLM integration
-?   ?   ??? prompts.py            # AI prompts
-?   ?   ??? validators.py         # Data validation
-?   ?   ??? export_service.py     # CSV/Excel export
-?   ?   ??? webhook_service.py    # Webhook delivery
-?   ?   ??? rate_limiter.py       # Rate limiting
-?   ?   ??? metrics.py            # Prometheus metrics
-?   ??? database/
-?   ?   ??? connection.py    # Mongo connection
-?   ?   ??? models.py        # DB models
-?   ??? worker/
-?       ??? tasks.py         # Celery tasks
-??? frontend/
-?   ??? index.html           # UI
-?   ??? styles.css           # Styles
-?   ??? app.js               # JS
-??? tests/
-??? docker-compose.yml
-??? Dockerfile
-??? prometheus.yml
-??? requirements.txt
+```text
+invoice-ai-extractor/
+├── app/
+│   ├── api/
+│   │   ├── main.py          # FastAPI main app
+│   │   ├── invoices.py      # Invoice CRUD
+│   │   ├── webhooks.py      # Webhook management
+│   │   ├── batch.py         # Batch processing
+│   │   └── schemas.py       # Pydantic models
+│   ├── auth/
+│   │   ├── router.py        # Auth endpoints
+│   │   ├── jwt_handler.py   # JWT logic
+│   │   ├── dependencies.py  # FastAPI dependencies
+│   │   └── schemas.py       # Auth schemas
+│   ├── core/
+│   │   ├── extraction_engine.py
+│   │   ├── prompts.py
+│   │   ├── validators.py
+│   │   ├── export_service.py
+│   │   ├── webhook_service.py
+│   │   ├── rate_limiter.py
+│   │   └── metrics.py
+│   ├── database/
+│   │   ├── connection.py
+│   │   └── models.py
+│   └── worker/
+│       └── tasks.py
+├── frontend/
+│   ├── index.html
+│   ├── styles.css
+│   └── app.js
+├── tests/
+├── docker-compose.yml
+├── Dockerfile
+├── prometheus.yml
+├── requirements.txt
+└── README.md
 ```
 
 ## Tests
 
 ```bash
-# Run unit tests
 pytest tests/
-
-# API smoke tests
 python tests/auto_test.py
-
-# LM Studio connectivity test
 python tests/lmstudio-test.py
 ```
 
@@ -202,86 +226,41 @@ Detailed testing strategy: [TESTING.md](TESTING.md)
 
 ## Metrics
 
-### Prometheus Metrics
-- `invoice_api_requests_total` - Total API requests
-- `invoices_processed_total` - Total processed invoices
-- `invoice_processing_time_seconds` - Processing time histogram
-- `auth_attempts_total` - Auth attempts
-- `webhook_calls_total` - Webhook calls
+Prometheus metrics include:
 
-### Grafana
-Default password: `admin/admin`
-Prometheus data source URL: `http://prometheus:9090`
+- `invoice_api_requests_total`
+- `invoices_processed_total`
+- `invoice_processing_time_seconds`
+- `auth_attempts_total`
+- `webhook_calls_total`
 
 Details: [docs/observability.md](docs/observability.md)
 
 ## GDPR / KVKK Compliance
 
-- **Automatic Deletion**: Uploaded files are deleted after processing
-- **Local Processing**: With LM Studio, data stays on-prem
-- **Data Minimization**: Only necessary fields are extracted
-- **Audit Log**: All operations are logged
+- Uploaded files can be automatically deleted after processing
+- Local processing keeps sensitive data on-prem when LM Studio is used
+- Only necessary fields are extracted
+- Audit logs can track user and invoice operations
 - Details: [docs/audit-log.md](docs/audit-log.md)
 - Data retention policy: [docs/data-retention.md](docs/data-retention.md)
 
-## Documentation Notes
-
-### Post-Upload Status UX
-- **Task progress visualization**: progress bar, step list, ETA.
-- **Batch results table**: summary table with filters and error details.
-
-### Audit Log Strategy
-- **Format**: JSONL with `event_type`, `actor_id`, `resource_id`, `status`, `duration_ms`, `ip`, `user_agent`, `timestamp`.
-- **Retention**: Default 30 days; 7/30/90/365 options.
-- **Search/Filters**: Time range, event type, user, invoice id, batch id.
-
-### KVKK/GDPR Data Retention Policy
-- Automatic deletion is available; configuration options should be documented.
-- Example: `RETENTION_DAYS`, `AUTO_DELETE_UPLOADS`, `PURGE_SCHEDULE`.
-
-### Model Selection Strategy
-- **Comparison**: LM Studio vs Gemini performance/accuracy/latency table.
-- **Recommended scenarios**: on-prem for sensitive data, cloud for quality and speed.
-
-### Prompt Management
-- **Versioning policy**: prompt id, semver, change notes.
-- **A/B testing**: traffic split, KPI tracking, outcome metrics.
-
-### Queue Observability
-- **Celery metrics**: worker count, queue length, task latency, retry count.
-- **Prometheus integration**: metric names and scrape targets.
-
-### Test Coverage and Strategy
-- **Scope**: unit/API/e2e/batch/processing validation tests.
-- **Test doc**: see `TESTING.md`.
-
-### Load/Stress Testing
-- **Tools**: k6 or Locust for rate limit and batch scenarios.
-- **Scenarios**: 429 behavior, queue overflow, webhook latency.
-
-### API Examples and Error Schemas
-- **Examples**: single upload, batch upload, webhook test.
-- **Error schema**: standard error envelope (code, message, details, request_id).
-
 ## Roadmap Priorities
 
-1) API examples + error schemas (easier integration)
-2) Test coverage and quality documentation (builds trust)
-3) Observability (tracing/logging) (operational reliability)
-4) LLM usage strategy and prompt versioning (quality and maintainability)
+1. API examples and standard error schemas
+2. Test coverage and quality documentation
+3. Observability with tracing and structured logging
+4. LLM usage strategy and prompt versioning
+5. Load and stress testing with k6 or Locust
 
 ## Contributing
 
 1. Fork the repo
-2. Create a feature branch (`git checkout -b feature/amazing`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push the branch (`git push origin feature/amazing`)
-5. Open a Pull Request
+2. Create a feature branch
+3. Commit your changes
+4. Push the branch
+5. Open a pull request
 
 ## License
 
 MIT License - See [LICENSE](LICENSE) for details.
-
----
-
-QIT AI Assessment project.
